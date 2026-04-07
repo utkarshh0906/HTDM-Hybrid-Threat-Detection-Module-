@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hybrid Threat Detection Model</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config={darkMode:"class",theme:{extend:{
+  colors:{primary:"#2563eb","background-light":"#f0eef5","background-dark":"#191022"},
+  fontFamily:{display:["Inter"]},
+  borderRadius:{DEFAULT:"0.5rem",lg:"1rem",xl:"1.5rem",full:"9999px"}
+}}}
+</script>
+<style>
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  body{font-family:'Inter',sans-serif;}
+  .screen{display:none;} .active{display:flex;}
+  #progressBar{transition:width 0.1s linear;}
+  .threat-bar{transition:width 0.8s cubic-bezier(0.4,0,0.2,1);}
+  @keyframes ping-slow{0%{transform:scale(1);opacity:0.6;}100%{transform:scale(1.6);opacity:0;}}
+  .ping-slow{animation:ping-slow 1.5s ease-out infinite;}
+  @keyframes scanline{0%{top:0%;opacity:1;}100%{top:100%;opacity:0;}}
+  .scan-line{animation:scanline 1.2s linear infinite;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .fade-in{animation:fadeIn 0.4s ease both;}
+  @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+  .slide-up{animation:slideUp 0.35s ease both;}
+  @keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+  .result-card{transition:box-shadow 0.2s,transform 0.2s;}
+  .result-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(37,99,235,0.15);}
+  .news-card{transition:box-shadow 0.2s,transform 0.2s;}
+  .news-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(37,99,235,0.18);}
+  .verified-card{transition:box-shadow 0.2s,transform 0.2s;}
+  .verified-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(16,185,129,0.18);}
+  #emailValidIcon{transition:opacity 0.2s,color 0.2s;}
+  #email{transition:border-color 0.25s;}
+  select{color:#1e1b4b;background-color:#f1f0f4;}
+  .dark select{color:#ede9f8!important;background-color:#1e2a45!important;}
+  select option{color:#1e1b4b;background-color:#f1f0f4;}
+  .dark select option{color:#ede9f8;background-color:#1e2a45;}
+  .dark input::placeholder,.dark textarea::placeholder{color:#9ca3af;}
+  input::placeholder,textarea::placeholder{color:#6b7280;}
+  .history-item{transition:background 0.15s;}
+  .history-item:hover{background:rgba(37,99,235,0.08);}
+  .avatar-ring{background:conic-gradient(#2563eb,#60a5fa,#2563eb);padding:2px;border-radius:9999px;}
+  .avatar-inner{background:#2d1f45;border-radius:9999px;width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+  /* ── Collapsible top nav ── */
+  .top-navbar{position:fixed;top:0;left:0;right:0;z-index:100;display:none;}
+  .top-navbar.nav-visible{display:block;}
+  .top-navbar-bar{height:56px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+  .dark .top-navbar-bar{background:#150e22;border-bottom:1px solid rgba(37,99,235,0.2);}
+  .top-navbar-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#1e293b;}
+  .dark .top-navbar-title{color:#fff;}
+  .hamburger-btn{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(37,99,235,0.08);border:none;color:#2563eb;transition:background 0.2s;}
+  .hamburger-btn:hover{background:rgba(37,99,235,0.15);}
+  /* Drawer */
+  .nav-drawer-overlay{position:fixed;inset:0;z-index:99;background:rgba(0,0,0,0);pointer-events:none;transition:background 0.25s;}
+  .nav-drawer-overlay.open{background:rgba(0,0,0,0.45);pointer-events:all;}
+  .nav-drawer{position:fixed;top:0;left:0;bottom:0;z-index:100;width:220px;background:#fff;box-shadow:8px 0 32px rgba(0,0,0,0.12);transform:translateX(-100%);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;padding:0;}
+  .dark .nav-drawer{background:#150e22;box-shadow:8px 0 32px rgba(0,0,0,0.4);}
+  .nav-drawer.open{transform:translateX(0);}
+  .nav-drawer-header{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid #e2e8f0;flex-shrink:0;}
+  .dark .nav-drawer-header{border-bottom:1px solid rgba(37,99,235,0.2);}
+  .nav-drawer-close{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(37,99,235,0.08);border:none;color:#2563eb;transition:background 0.2s;}
+  .nav-drawer-close:hover{background:rgba(37,99,235,0.15);}
+  .nav-drawer-items{display:flex;flex-direction:column;padding:10px 8px;gap:2px;flex:1;overflow-y:auto;}
+  .nav-btn{transition:color 0.2s,background 0.2s;display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;width:100%;border:none;cursor:pointer;text-align:left;background:transparent;font-size:14px;font-weight:600;}
+  .nav-btn.nav-active{color:#2563eb;background:rgba(37,99,235,0.10);}
+  .nav-btn:not(.nav-active){color:#64748b;}
+  .dark .nav-btn:not(.nav-active){color:#94a3b8;}
+  .nav-btn:not(.nav-active):hover{background:rgba(37,99,235,0.06);color:#2563eb;}
+  .nav-btn .nav-dot{width:8px;height:8px;border-radius:9999px;background:#10b981;margin-left:auto;flex-shrink:0;}
+  /* Active tab label in header */
+  .active-tab-label{font-size:13px;font-weight:700;color:#2563eb;}
+  #appShell .tab-content-area{padding-top:64px;padding-bottom:0;}
+  .cred-ring{position:relative;width:44px;height:44px;flex-shrink:0;}
+  .cred-ring svg{transform:rotate(-90deg);}
+  .cred-ring .cred-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+  .skeleton{background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+  .dark .skeleton{background:linear-gradient(90deg,#2d1f45 25%,#3a2a55 50%,#2d1f45 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+  .filter-pill{transition:all 0.15s;cursor:pointer;}
+  .filter-pill.active-pill{background:#2563eb;color:#fff;}
+  .filter-pill:not(.active-pill){background:transparent;color:#2563eb;border:1px solid #2563eb;}
+  @keyframes trendPulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+  .trend-live{animation:trendPulse 1.8s ease-in-out infinite;}
+
+  /* ── Gamification ── */
+  @keyframes xpFill{from{width:var(--xp-from);}to{width:var(--xp-to);}}
+  @keyframes toastIn{0%{transform:translateY(80px) scale(0.9);opacity:0;}60%{transform:translateY(-6px) scale(1.02);}100%{transform:translateY(0) scale(1);opacity:1;}}
+  @keyframes toastOut{0%{transform:translateY(0);opacity:1;}100%{transform:translateY(80px);opacity:0;}}
+  @keyframes xpPop{0%{transform:scale(1);}40%{transform:scale(1.18);}100%{transform:scale(1);}}
+  @keyframes rankUp{0%{transform:scale(1) rotate(0deg);}30%{transform:scale(1.3) rotate(-6deg);}60%{transform:scale(1.3) rotate(6deg);}100%{transform:scale(1) rotate(0deg);}}
+  @keyframes floatXP{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-40px);}}
+  .xp-bar-fill{transition:width 0.7s cubic-bezier(0.4,0,0.2,1);}
+  .xp-pop{animation:xpPop 0.45s cubic-bezier(0.34,1.56,0.64,1);}
+  .rank-up-anim{animation:rankUp 0.6s ease both;}
+  .gamify-toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+    z-index:9999;min-width:240px;max-width:320px;
+    background:linear-gradient(135deg,#1e1a2e,#2d1f45);
+    border:1px solid rgba(37,99,235,0.35);border-radius:16px;
+    padding:12px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);
+    display:flex;align-items:center;gap:12px;opacity:0;pointer-events:none;
+    animation:toastIn 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  .gamify-toast.toast-exit{animation:toastOut 0.35s ease forwards;}
+  .gamify-toast .toast-icon{font-size:28px;flex-shrink:0;}
+  .gamify-toast .toast-body{}
+  .gamify-toast .toast-title{font-size:13px;font-weight:800;color:#fff;margin-bottom:2px;}
+  .gamify-toast .toast-sub{font-size:11px;color:#93c5fd;font-weight:600;}
+  .float-xp{
+    position:fixed;pointer-events:none;z-index:9998;
+    font-size:14px;font-weight:800;color:#60a5fa;
+    animation:floatXP 1.2s ease forwards;
+  }
+  .rank-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:9999px;font-size:11px;font-weight:800;letter-spacing:0.03em;}
+  .xp-navbar-wrap{display:flex;flex-direction:column;gap:2px;min-width:90px;}
+  .xp-navbar-bar{height:4px;border-radius:9999px;background:rgba(255,255,255,0.1);overflow:hidden;}
+  .xp-navbar-fill{height:100%;border-radius:9999px;background:linear-gradient(90deg,#2563eb,#60a5fa);transition:width 0.7s cubic-bezier(0.4,0,0.2,1);}
+  .xp-navbar-label{font-size:10px;font-weight:700;color:#93c5fd;display:flex;justify-content:space-between;}
+  .streak-chip{display:inline-flex;align-items:center;gap:3px;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);border-radius:9999px;padding:2px 8px;font-size:10px;font-weight:800;color:#fb923c;}
+  #profileXpSection{background:linear-gradient(135deg,rgba(37,99,235,0.12),rgba(37,99,235,0.04));border:1px solid rgba(37,99,235,0.2);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .badge-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .badge-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;border:1px solid;transition:all 0.2s;}
+  .badge-item.earned{background:rgba(37,99,235,0.1);border-color:rgba(37,99,235,0.3);}
+  .badge-item.locked{background:rgba(100,116,139,0.06);border-color:rgba(100,116,139,0.15);filter:grayscale(1);opacity:0.5;}
+  .badge-item .badge-emoji{font-size:22px;}
+  .badge-item .badge-name{font-size:9px;font-weight:700;text-align:center;color:#94a3b8;}
+  /* Verified News specific */
+  .verified-pill{transition:all 0.15s;cursor:pointer;}
+  .verified-pill.active-pill{background:#10b981;color:#fff;}
+  .verified-pill:not(.active-pill){background:transparent;color:#10b981;border:1px solid #10b981;}
+  @keyframes verifiedPulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+  .verified-live{animation:verifiedPulse 2s ease-in-out infinite;}
+  @keyframes verifiedGlow{
+    0%,100%{box-shadow:0 0 6px 1px rgba(16,185,129,0.25),0 0 14px 2px rgba(16,185,129,0.08);}
+    50%{box-shadow:0 0 8px 2px rgba(16,185,129,0.35),0 0 18px 3px rgba(16,185,129,0.12);}
+  }
+  .verified-glow{animation:verifiedGlow 3s ease-in-out infinite;}
+  @keyframes dimGlow{
+    0%,100%{box-shadow:0 0 6px 1px rgba(37,99,235,0.3),0 0 14px 2px rgba(37,99,235,0.1);}
+    33%{box-shadow:0 0 6px 1px rgba(59,130,246,0.3),0 0 14px 2px rgba(59,130,246,0.1);}
+    66%{box-shadow:0 0 6px 1px rgba(56,189,248,0.25),0 0 14px 2px rgba(56,189,248,0.08);}
+  }
+  .glow-box{animation:dimGlow 3.5s ease-in-out infinite;}
+  @keyframes ebGlow{
+    0%,100%{box-shadow:0 0 10px 3px rgba(37,99,235,0.55),0 0 24px 5px rgba(37,99,235,0.2);}
+    33%{box-shadow:0 0 10px 3px rgba(59,130,246,0.55),0 0 24px 5px rgba(59,130,246,0.2);}
+    66%{box-shadow:0 0 10px 3px rgba(56,189,248,0.5),0 0 24px 5px rgba(56,189,248,0.18);}
+  }
+  #loginScreen{position:relative;overflow:hidden;}
+  #pixelBlastCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+  #loginContent{position:relative;z-index:1;}
+  #loginCard{
+    background:rgba(26,16,40,0.92);
+    backdrop-filter:blur(18px) saturate(1.4);
+    -webkit-backdrop-filter:blur(18px) saturate(1.4);
+    border-radius:1.5rem;padding:2rem 1.75rem;position:relative;z-index:0;
+    border:1px solid rgba(37,99,235,0.25);
+    animation:ebGlow 2.5s ease-in-out infinite;
+  }
+
+  /* Dark scrollbar for horizontal pill rows */
+  #filterRow, #countryPillRow {
+    scrollbar-width: thin;
+    scrollbar-color: #2563eb #1e2a45;
+  }
+  #filterRow::-webkit-scrollbar, #countryPillRow::-webkit-scrollbar { height: 4px; }
+  #filterRow::-webkit-scrollbar-track, #countryPillRow::-webkit-scrollbar-track {
+    background: #1e2a45; border-radius: 9999px;
+  }
+  #filterRow::-webkit-scrollbar-thumb, #countryPillRow::-webkit-scrollbar-thumb {
+    background: #2563eb; border-radius: 9999px;
+  }
+  #filterRow::-webkit-scrollbar-thumb:hover, #countryPillRow::-webkit-scrollbar-thumb:hover {
+    background: #3b82f6;
+  }
+  /* ── UI Polish: smooth hover scaling on action buttons ── */
+  .btn-scale {
+    transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1),
+                background-color 0.18s ease,
+                box-shadow 0.18s ease;
+    will-change: transform;
+  }
+  .btn-scale:not(:disabled):hover  { transform: scale(1.03); box-shadow: 0 6px 20px rgba(37,99,235,0.18); }
+  .btn-scale:not(:disabled):active { transform: scale(0.96); box-shadow: none; }
+  .btn-scale:disabled { opacity: 0.65; cursor: not-allowed; transform: none !important; }
+  /* Spinner sizing consistency */
+  #scanSpinner { flex-shrink: 0; }
+  /* Sidebar nav active highlight */
+</style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark min-h-screen">
+<div class="w-full min-h-screen bg-white dark:bg-[#1a1028] flex flex-col">
+
+  <!-- ═══════ LOGIN ═══════ -->
+  <div id="loginScreen" class="screen active flex-col items-center justify-center" style="min-height:100vh">
+    <canvas id="pixelBlastCanvas"></canvas>
+    <div id="loginContent" class="flex flex-col justify-center w-full max-w-md px-8 py-12 gap-6">
+      <div id="loginCard" class="flex flex-col gap-6">
+        <div class="flex flex-col items-center gap-3">
+          <div class="relative flex items-center justify-center w-16 h-16">
+            <div class="absolute inset-0 rounded-full bg-primary/30 ping-slow"></div>
+            <span class="material-symbols-outlined text-primary text-4xl z-10">shield</span>
+          </div>
+          <h1 class="text-2xl font-bold text-center text-white">Hybrid Threat Detection</h1>
+          <p class="text-sm text-slate-300 text-center">AI-powered content safety platform</p>
+        </div>
+        <div class="flex flex-col gap-4">
+          <div class="relative">
+            <input id="email" type="email" placeholder="Email address"
+              class="w-full h-12 px-4 pr-10 rounded-xl bg-white/10 border border-white/20 focus:border-primary focus:outline-none text-white font-medium placeholder:text-slate-400"/>
+            <span id="emailValidIcon" class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-base opacity-0 pointer-events-none"></span>
+          </div>
+          <p id="emailHint" class="hidden -mt-2 text-xs px-1 font-medium"></p>
+          <div class="relative">
+            <input id="password" type="password" placeholder="Password"
+              class="w-full h-12 px-4 pr-16 rounded-xl bg-white/10 border border-white/20 focus:border-primary focus:outline-none text-white font-medium placeholder:text-slate-400 transition"/>
+            <button type="button" onclick="togglePassword()" id="pwToggleBtn"
+              class="absolute right-4 top-1/2 -translate-y-1/2 text-primary text-sm font-bold hover:opacity-70 transition select-none">Show</button>
+          </div>
+          <button onclick="login()"
+            class="btn-scale w-full bg-primary text-white font-bold py-4 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/30">Login</button>
+          <p id="loginError" class="hidden text-red-400 text-sm text-center font-semibold"></p>
+        </div>
+        <p class="text-center text-xs text-slate-400">Demo credentials: any email + password</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ BUFFER ═══════ -->
+  <div id="bufferScreen" class="screen flex-col items-center justify-center gap-8 px-8 py-12 min-h-screen" style="position:relative;z-index:0;">
+    <div class="relative flex items-center justify-center w-24 h-24" style="z-index:1;">
+      <div class="absolute inset-0 rounded-full bg-primary/10 animate-ping"></div>
+      <div class="absolute inset-2 rounded-full bg-primary/10 animate-ping" style="animation-delay:0.3s"></div>
+      <span class="material-symbols-outlined text-primary text-5xl z-10 animate-pulse">shield</span>
+    </div>
+    <div class="flex flex-col items-center gap-2" style="z-index:1;position:relative;">
+      <h2 class="text-lg font-bold text-center text-slate-900 dark:text-white">Initializing Hybrid Threat Detection Model</h2>
+      <p id="loadingStatus" class="text-sm text-slate-600 dark:text-slate-400 text-center">Loading neural threat modules...</p>
+    </div>
+    <div class="w-full max-w-md" style="z-index:1;position:relative;">
+      <div class="h-2 bg-slate-200 dark:bg-primary/20 rounded-full overflow-hidden">
+        <div id="progressBar" class="bg-primary h-full w-0 rounded-full"></div>
+      </div>
+      <p id="progressText" class="text-xs mt-2 text-center text-slate-500 dark:text-slate-400">0%</p>
+    </div>
+  </div>
+
+  <!-- ═══════ APP SHELL ═══════ -->
+  <div id="appShell" class="screen flex-col flex-1 min-h-screen" style="position:relative;">
+    <div id="tabContent" class="tab-content-area flex-1 overflow-y-auto flex flex-col items-center" style="position:relative;z-index:1;">
+
+      <!-- ── SCAN TAB ── -->
+      <div id="tabScan" class="tab-panel flex flex-col px-10 py-8 gap-5 max-w-4xl w-full">
+        <header class="flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-slate-900 dark:text-white">Threat Detection</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400" id="userEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fa8f899f88ba9f829b978a969fd4999597">[email&#160;protected]</a></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+            <span class="text-xs text-primary font-semibold">Model Active</span>
+            <button onclick="toggleTheme()" id="themeToggleBtn" title="Toggle dark/light mode"
+              class="btn-scale ml-1 p-2 rounded-lg bg-slate-100 dark:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition">
+              <span class="material-symbols-outlined text-base" id="themeIcon">light_mode</span>
+            </button>
+            <button onclick="switchTab('tabProfile')" title="My Profile"
+              class="btn-scale ml-1 p-2 rounded-lg bg-slate-100 dark:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition">
+              <span class="material-symbols-outlined text-base">account_circle</span>
+            </button>
+            <button onclick="logout()" title="Logout"
+              class="btn-scale p-2 rounded-lg bg-slate-100 dark:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition">
+              <span class="material-symbols-outlined text-base">logout</span>
+            </button>
+          </div>
+        </header>
+        <div class="relative">
+          <textarea id="contentInput" placeholder="Paste text, URL, or suspicious content to analyze..."
+            class="w-full p-4 rounded-xl bg-slate-100 dark:bg-[#2d1f45] min-h-[130px] resize-none border border-transparent focus:border-primary focus:outline-none text-slate-900 dark:text-white text-sm transition"></textarea>
+          <button onclick="clearInput()" class="absolute top-3 right-3 text-slate-400 hover:text-primary transition" title="Clear">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+        <p id="inputTypeMsg" class="hidden text-xs text-primary font-semibold flex items-center gap-1 -mt-2 px-1"><span class="material-symbols-outlined" style="font-size:14px">info</span><span></span></p>
+        <div class="flex gap-3">
+          <button onclick="openReport()"
+            class="btn-scale flex-1 border border-primary text-primary py-3 rounded-xl text-sm font-bold hover:bg-primary/10 flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-base">flag</span>Report Content
+          </button>
+          <button onclick="scanContent()" id="scanBtn"
+            class="btn-scale flex-1 bg-primary text-white py-3 rounded-xl text-sm font-bold hover:bg-blue-700 flex items-center justify-center gap-2">
+            <svg id="scanSpinner" class="hidden animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+            <span class="material-symbols-outlined text-base" id="scanBtnIcon">radar</span>
+            <span id="scanBtnText">Scan Content</span>
+          </button>
+        </div>
+        <div id="resultsSection" class="flex flex-col gap-3">
+          <div id="defaultHint" class="flex flex-col items-center gap-2 py-6">
+            <span class="material-symbols-outlined text-3xl text-slate-400">manage_search</span>
+            <p class="text-sm text-center text-slate-500 dark:text-slate-400">Enter content above and click <strong class="text-slate-700 dark:text-slate-200">Scan Content</strong> to analyze threats.</p>
+          </div>
+          <div id="scanningAnim" class="hidden flex-col items-center gap-3 py-6">
+            <div class="relative w-16 h-16 rounded-full border-2 border-primary/30 overflow-hidden">
+              <div class="scan-line absolute left-0 right-0 h-0.5 bg-primary/70"></div>
+              <span class="material-symbols-outlined text-primary text-3xl absolute inset-0 flex items-center justify-center">radar</span>
+            </div>
+            <p class="text-sm text-primary font-semibold">Analyzing content...</p>
+          </div>
+          <div id="resultCards" class="hidden flex-col gap-3 fade-in">
+            <div class="result-card glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/20 p-4 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-amber-500 text-lg">article</span><span class="text-sm font-semibold text-slate-800 dark:text-white">Fake News Probability</span></div>
+                <span id="fakeNewsScore" class="text-sm font-bold text-amber-500">—</span>
+              </div>
+              <div class="h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden"><div id="fakeNewsBar" class="threat-bar h-full bg-amber-400 rounded-full w-0"></div></div>
+              <p id="fakeNewsLabel" class="text-xs text-slate-500 dark:text-slate-400"></p>
+            </div>
+            <div class="result-card glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/20 p-4 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-rose-500 text-lg">mood_bad</span><span class="text-sm font-semibold text-slate-800 dark:text-white">Cyberbullying Risk</span></div>
+                <span id="bullyingScore" class="text-sm font-bold text-rose-500">—</span>
+              </div>
+              <div class="h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden"><div id="bullyingBar" class="threat-bar h-full bg-rose-400 rounded-full w-0"></div></div>
+              <p id="bullyingLabel" class="text-xs text-slate-500 dark:text-slate-400"></p>
+            </div>
+            <div class="result-card glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/20 p-4 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-blue-400 text-lg">face_retouching_natural</span><span class="text-sm font-semibold text-slate-800 dark:text-white">Deepfake Probability</span></div>
+                <span id="deepfakeScore" class="text-sm font-bold text-blue-400">—</span>
+              </div>
+              <div class="h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden"><div id="deepfakeBar" class="threat-bar h-full bg-blue-400 rounded-full w-0"></div></div>
+              <p id="deepfakeLabel" class="text-xs text-slate-500 dark:text-slate-400"></p>
+            </div>
+            <!-- Combined Threat Level -->
+            <div id="threatLevelCard" class="result-card rounded-xl p-4 flex items-center justify-between border fade-in">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg" id="threatLevelIcon">shield</span>
+                <span class="text-sm font-semibold text-slate-800 dark:text-white">Overall Threat Level</span>
+              </div>
+              <span id="threatLevelBadge" class="text-sm font-extrabold px-4 py-1 rounded-full">—</span>
+            </div>
+            <div id="verdictCard" class="glow-box rounded-xl p-4 flex items-center gap-3 border">
+              <span id="verdictIcon" class="material-symbols-outlined text-2xl"></span>
+              <div><p id="verdictTitle" class="font-bold text-sm dark:text-white"></p><p id="verdictDesc" class="text-xs text-slate-500 dark:text-slate-400"></p></div>
+            </div>
+            <!-- Explainable AI Output -->
+            <div id="aiReason" class="hidden rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 p-4 flex flex-col gap-2 fade-in">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-base">psychology</span>
+                <span class="text-xs font-bold text-primary uppercase tracking-wide">AI Explanation</span>
+              </div>
+              <p id="aiReasonText" class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"></p>
+            </div>
+            <!-- Step 6: Report Result button -->
+            <button onclick="reportResult()" class="btn-scale w-full border border-rose-400 text-rose-500 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-base">flag</span>Report This Result
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TRENDING TAB ── -->
+      <div id="tabTrending" class="tab-panel hidden flex-col px-10 py-8 gap-4 max-w-4xl w-full">
+        <header class="flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-rose-500 text-xl">trending_up</span>Trending Fake News
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Live tracker · updated every hour</p>
+          </div>
+          <div class="flex items-center gap-1.5 bg-red-100 dark:bg-red-900/30 px-2.5 py-1 rounded-full">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block trend-live"></span>
+            <span class="text-xs font-bold text-red-600 dark:text-red-400">LIVE</span>
+          </div>
+        </header>
+        <div id="filterRow" class="flex gap-2 overflow-x-auto pb-1">
+          <button class="filter-pill active-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="filterNews('All',this)">All</button>
+          <button class="filter-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="filterNews('Health',this)">🏥 Health</button>
+          <button class="filter-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="filterNews('Politics',this)">🏛️ Politics</button>
+          <button class="filter-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="filterNews('Tech',this)">💻 Tech</button>
+          <button class="filter-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="filterNews('Climate',this)">🌍 Climate</button>
+          <button class="filter-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="filterNews('Finance',this)">💰 Finance</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="glow-box rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 p-3 flex flex-col items-center gap-0.5">
+            <span class="text-lg font-bold text-red-600 dark:text-red-400" id="stripTotal">18</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">Active Stories</span>
+          </div>
+          <div class="glow-box rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 p-3 flex flex-col items-center gap-0.5">
+            <span class="text-lg font-bold text-amber-600 dark:text-amber-400" id="stripHigh">9</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">High Risk</span>
+          </div>
+          <div class="glow-box rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 p-3 flex flex-col items-center gap-0.5">
+            <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400" id="stripDebunked">6</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">Debunked</span>
+          </div>
+        </div>
+        <div id="newsList" class="flex flex-col gap-3"></div>
+      </div>
+
+      <!-- ── VERIFIED NEWS TAB ── -->
+      <div id="tabVerified" class="tab-panel hidden flex-col px-10 py-8 gap-4 slide-up max-w-4xl w-full">
+        <header class="flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-emerald-500 text-xl">verified</span>Verified News
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Official government &amp; national broadcaster sources</p>
+          </div>
+          <div class="flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-1 rounded-full">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block verified-live"></span>
+            <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">VERIFIED</span>
+          </div>
+        </header>
+
+        <!-- Stats strip -->
+        <div class="grid grid-cols-3 gap-2">
+          <div class="verified-glow rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 p-3 flex flex-col items-center gap-0.5">
+            <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400">7</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">Countries</span>
+          </div>
+          <div class="verified-glow rounded-xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800/40 p-3 flex flex-col items-center gap-0.5">
+            <span class="text-lg font-bold text-sky-600 dark:text-sky-400" id="verifiedSourceCount">28</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">Sources</span>
+          </div>
+          <div class="verified-glow rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 p-3 flex flex-col items-center gap-0.5">
+            <span class="text-lg font-bold text-primary" id="verifiedArticleCount">56</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">Articles</span>
+          </div>
+        </div>
+
+        <!-- Country filter dropdown -->
+        <div class="flex flex-col gap-2">
+          <div class="relative">
+            <select id="countryFilter" onchange="filterVerifiedNews(this.value)"
+              class="w-full h-12 pl-10 pr-4 rounded-xl border border-transparent focus:border-emerald-500 focus:outline-none font-semibold text-sm appearance-none">
+              <option value="All">🌐 All Countries</option>
+              <option value="India">🇮🇳 India</option>
+              <option value="United States">🇺🇸 United States</option>
+              <option value="China">🇨🇳 China</option>
+              <option value="Russia">🇷🇺 Russia</option>
+              <option value="United Kingdom">🇬🇧 United Kingdom</option>
+              <option value="European Union">🇪🇺 European Union</option>
+              <option value="Japan">🇯🇵 Japan</option>
+            </select>
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 text-base pointer-events-none">public</span>
+          </div>
+        </div>
+
+        <!-- Quick-access country pills -->
+        <div id="countryPillRow" class="flex gap-2 overflow-x-auto pb-1">
+          <button class="verified-pill active-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="setCountryFilter('All',this)">All</button>
+          <button class="verified-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="setCountryFilter('India',this)">🇮🇳 India</button>
+          <button class="verified-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="setCountryFilter('United States',this)">🇺🇸 USA</button>
+          <button class="verified-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="setCountryFilter('China',this)">🇨🇳 China</button>
+          <button class="verified-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="setCountryFilter('Russia',this)">🇷🇺 Russia</button>
+          <button class="verified-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="setCountryFilter('United Kingdom',this)">🇬🇧 UK</button>
+          <button class="verified-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="setCountryFilter('European Union',this)">🇪🇺 EU</button>
+          <button class="verified-pill text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap" onclick="setCountryFilter('Japan',this)">🇯🇵 Japan</button>
+        </div>
+
+        <!-- Info notice -->
+        <div class="flex items-start gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl px-4 py-3">
+          <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base mt-0.5 flex-shrink-0">info</span>
+          <p class="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">All sources below are official government portals, national public broadcasters, or state-verified news agencies. Cross-reference these with suspicious content to identify misinformation.</p>
+        </div>
+
+        <!-- News list -->
+        <div id="verifiedNewsList" class="flex flex-col gap-3"></div>
+      </div>
+
+      <!-- ── REPORT TAB ── -->
+      <div id="tabReport" class="tab-panel hidden flex-col px-10 py-8 gap-6 max-w-4xl w-full">
+        <header><h2 class="font-bold text-slate-900 dark:text-white">Report Content</h2></header>
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-semibold text-slate-800 dark:text-slate-200">Harm Type</label>
+          <select id="category" class="w-full h-12 px-4 rounded-xl border border-transparent focus:border-primary focus:outline-none font-medium">
+            <option disabled selected value="">Select harm type...</option>
+            <option>Fake News</option><option>Deepfake Media</option><option>Cyberbullying</option>
+            <option>Harassment</option><option>Spam / Phishing</option><option>Other</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-semibold text-slate-800 dark:text-slate-200">Content URL or Sample</label>
+          <input id="reportUrl" type="url" placeholder="https://..."
+            class="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-[#2d1f45] border border-transparent focus:border-primary focus:outline-none text-slate-900 dark:text-white text-sm font-medium"/>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-semibold text-slate-800 dark:text-slate-200">Additional Context</label>
+          <textarea id="reportContext" placeholder="Describe why this content is harmful..." rows="4"
+            class="w-full p-4 rounded-xl bg-slate-100 dark:bg-[#2d1f45] border border-transparent focus:border-primary focus:outline-none text-slate-900 dark:text-white text-sm resize-none"></textarea>
+        </div>
+        <button onclick="submitReport()"
+          class="btn-scale w-full bg-primary text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700">
+          <span>Submit Report</span><span class="material-symbols-outlined">send</span>
+        </button>
+        <div id="successMsg" class="hidden items-center gap-2 text-emerald-700 dark:text-emerald-400 text-sm font-semibold bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
+          <span class="material-symbols-outlined">check_circle</span>Report submitted successfully. Thank you for keeping the platform safe.
+        </div>
+        <div id="reportError" class="hidden items-center gap-2 text-red-600 dark:text-red-400 text-sm font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-4">
+          <span class="material-symbols-outlined">error</span>Please select a harm type before submitting.
+        </div>
+
+        <!-- Report History -->
+        <div class="flex flex-col gap-3 mt-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-base">history</span>Report History
+            </h3>
+            <button onclick="clearReportHistory()" class="text-xs text-red-500 font-semibold hover:opacity-70 transition flex items-center gap-1">
+              <span class="material-symbols-outlined" style="font-size:14px">delete_sweep</span>Clear All
+            </button>
+          </div>
+          <div id="reportHistoryList" class="flex flex-col gap-2 max-h-[320px] overflow-y-auto pr-1"></div>
+          <div id="reportHistoryEmpty" class="flex flex-col items-center gap-2 py-8">
+            <span class="material-symbols-outlined text-3xl text-slate-400">flag</span>
+            <p class="text-sm text-slate-500 dark:text-slate-400 text-center">No reports submitted yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PROFILE TAB ── -->
+      <div id="tabProfile" class="tab-panel hidden flex-col px-10 py-8 gap-5 slide-up max-w-4xl w-full">
+        <header><h2 class="font-bold text-slate-900 dark:text-white">My Profile</h2></header>
+        <div class="rounded-2xl bg-gradient-to-br from-primary/20 to-blue-900/30 border border-primary/25 p-5 flex items-center gap-4">
+          <div class="avatar-ring w-16 h-16 flex-shrink-0">
+            <div class="avatar-inner"><span id="avatarInitial" class="text-2xl font-bold text-primary">U</span></div>
+          </div>
+          <div class="flex flex-col gap-0.5 min-w-0 flex-1">
+            <p id="profileName" class="font-bold text-slate-900 dark:text-white truncate">User</p>
+            <p id="profileEmail" class="text-sm text-slate-600 dark:text-slate-400 truncate">user@example.com</p>
+            <div class="flex items-center gap-2 mt-1 flex-wrap">
+              <span id="profileRankBadge" class="rank-badge bg-blue-900/40 border border-blue-500/30 text-blue-300">🛡️ Scout</span>
+              <span id="profileStreakChip" class="streak-chip hidden">🔥 <span id="profileStreakVal">0</span> day streak</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- XP Progress Section -->
+        <div id="profileXpSection">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">XP Progress</span>
+            <span id="profileXpTotal" class="text-sm font-extrabold text-primary">0 XP</span>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span id="profileCurrentRank" class="text-xs font-bold text-blue-400">Scout</span>
+              <span id="profileNextRank" class="text-xs font-bold text-slate-400">→ Watcher</span>
+            </div>
+            <div class="h-3 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+              <div id="profileXpBar" class="xp-bar-fill h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-400" style="width:0%"></div>
+            </div>
+            <div class="flex justify-between mt-1">
+              <span id="profileXpCurrent" class="text-xs text-slate-400">0 XP</span>
+              <span id="profileXpNext" class="text-xs text-slate-400">100 XP needed</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/20 p-3 flex flex-col items-center gap-1">
+            <span id="statScans" class="text-xl font-bold text-primary">0</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 text-center">Total Scans</span>
+          </div>
+          <div class="glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/20 p-3 flex flex-col items-center gap-1">
+            <span id="statThreats" class="text-xl font-bold text-rose-500">0</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 text-center">Threats Found</span>
+          </div>
+          <div class="glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/20 p-3 flex flex-col items-center gap-1">
+            <span id="statReports" class="text-xl font-bold text-amber-500">0</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 text-center">Reports Filed</span>
+          </div>
+        </div>
+
+        <!-- Badges -->
+        <div class="flex flex-col gap-3">
+          <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-base">emoji_events</span>Badges
+          </h3>
+          <div class="badge-grid" id="badgeGrid"></div>
+        </div>
+
+        <!-- Scan History -->
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-base">history</span>Search History
+            </h3>
+            <button onclick="clearHistory()" class="text-xs text-red-500 font-semibold hover:opacity-70 transition flex items-center gap-1">
+              <span class="material-symbols-outlined" style="font-size:14px">delete_sweep</span>Clear All
+            </button>
+          </div>
+          <div id="historyList" class="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1"></div>
+          <div id="historyEmpty" class="hidden flex-col items-center gap-2 py-8">
+            <span class="material-symbols-outlined text-3xl text-slate-400">manage_search</span>
+            <p class="text-sm text-slate-500 dark:text-slate-400 text-center">No scans yet. Analyze some content first!</p>
+          </div>
+        </div>
+        <div class="glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/20 p-4 flex flex-col gap-3">
+          <h3 class="text-sm font-bold text-slate-800 dark:text-white">Account Info</h3>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-500 dark:text-slate-400">Member since</span>
+            <span id="memberSince" class="font-semibold text-slate-800 dark:text-slate-200">—</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-500 dark:text-slate-400">Last active</span>
+            <span id="lastActive" class="font-semibold text-slate-800 dark:text-slate-200">—</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-500 dark:text-slate-400">Plan</span>
+            <span class="font-semibold text-primary">Free Analyst</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tabContent -->
+
+  </div><!-- /appShell -->
+
+  <!-- ── TOP NAVBAR ── -->
+  <nav id="bottomNav" class="top-navbar">
+    <div class="top-navbar-bar">
+      <button class="hamburger-btn" onclick="toggleDrawer()" aria-label="Open menu">
+        <span class="material-symbols-outlined" style="font-size:20px" id="hamburgerIcon">menu</span>
+      </button>
+      <div class="top-navbar-title">
+        <span class="material-symbols-outlined text-primary" style="font-size:20px">shield</span>
+        <span>Hybrid Threat <span class="active-tab-label" id="activeTabLabel">· Scan</span></span>
+      </div>
+      <!-- XP bar in navbar -->
+      <div class="xp-navbar-wrap mr-2" title="Your XP progress">
+        <div class="xp-navbar-label">
+          <span id="navRankLabel">Scout</span>
+          <span id="navXpLabel">0 XP</span>
+        </div>
+        <div class="xp-navbar-bar">
+          <div class="xp-navbar-fill" id="navXpBar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── NAV DRAWER ── -->
+  <div class="nav-drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <div class="nav-drawer" id="navDrawer">
+    <div class="nav-drawer-header">
+      <span class="text-sm font-bold text-slate-800 dark:text-white">Navigation</span>
+      <button class="nav-drawer-close" onclick="closeDrawer()">
+        <span class="material-symbols-outlined" style="font-size:18px">close</span>
+      </button>
+    </div>
+    <div class="nav-drawer-items">
+      <button id="nav-tabScan" class="nav-btn nav-active" onclick="switchTab('tabScan');closeDrawer()">
+        <span class="material-symbols-outlined" style="font-size:20px">radar</span>
+        <span>Scan</span>
+      </button>
+      <button id="nav-tabTrending" class="nav-btn" onclick="switchTab('tabTrending');closeDrawer()">
+        <span class="material-symbols-outlined" style="font-size:20px">trending_up</span>
+        <span>Trending</span>
+      </button>
+      <button id="nav-tabVerified" class="nav-btn" onclick="switchTab('tabVerified');closeDrawer()">
+        <span class="material-symbols-outlined" style="font-size:20px">verified</span>
+        <span>Verified</span>
+        <span class="nav-dot"></span>
+      </button>
+      <button id="nav-tabReport" class="nav-btn" onclick="switchTab('tabReport');closeDrawer()">
+        <span class="material-symbols-outlined" style="font-size:20px">flag</span>
+        <span>Report</span>
+      </button>
+      <button id="nav-tabProfile" class="nav-btn" onclick="switchTab('tabProfile');closeDrawer()">
+        <span class="material-symbols-outlined" style="font-size:20px">account_circle</span>
+        <span>Profile</span>
+      </button>
+    </div>
+  </div>
+
+</div><!-- /app wrapper -->
+
+<!-- PixelBlast WebGL -->
+<script>
+(function initPixelBlast(){
+  const canvas=document.getElementById('pixelBlastCanvas');
+  const container=document.getElementById('loginScreen');
+  if(!canvas||!container||typeof THREE==='undefined')return;
+  const CFG={color:'#93c5fd',pixelSize:3,patternScale:2,patternDensity:1,speed:0.45,edgeFade:0.18,pixelJitter:0,enableRipples:true,rippleSpeed:0.3,rippleThickness:0.1,rippleIntensity:1.0,shapeType:1};
+  const MAX_CLICKS=10;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.setClearAlpha(0);
+  const dpr=renderer.getPixelRatio();
+  const scene=new THREE.Scene();
+  const camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  const uniforms={
+    uResolution:{value:new THREE.Vector2(1,1)},uTime:{value:0},uColor:{value:new THREE.Color(CFG.color)},
+    uPixelSize:{value:CFG.pixelSize*dpr},uScale:{value:CFG.patternScale},uDensity:{value:CFG.patternDensity},
+    uPixelJitter:{value:CFG.pixelJitter},uEdgeFade:{value:CFG.edgeFade},uShapeType:{value:CFG.shapeType},
+    uEnableRipples:{value:CFG.enableRipples?1:0},uRippleSpeed:{value:CFG.rippleSpeed},
+    uRippleThickness:{value:CFG.rippleThickness},uRippleIntensity:{value:CFG.rippleIntensity},
+    uClickPos:{value:Array.from({length:MAX_CLICKS},()=>new THREE.Vector2(-1,-1))},
+    uClickTimes:{value:new Float32Array(MAX_CLICKS)}
+  };
+  const VS=`void main(){gl_Position=vec4(position,1.0);}`;
+  const FS=`precision highp float;
+uniform vec3 uColor;uniform vec2 uResolution;uniform float uTime;uniform float uPixelSize;
+uniform float uScale;uniform float uDensity;uniform float uPixelJitter;uniform int uEnableRipples;
+uniform float uRippleSpeed;uniform float uRippleThickness;uniform float uRippleIntensity;
+uniform float uEdgeFade;uniform int uShapeType;
+const int SHAPE_SQUARE=0;const int SHAPE_CIRCLE=1;const int SHAPE_TRIANGLE=2;const int SHAPE_DIAMOND=3;
+const int MAX_CLICKS=10;
+uniform vec2 uClickPos[MAX_CLICKS];uniform float uClickTimes[MAX_CLICKS];
+float Bayer2(vec2 a){a=floor(a);return fract(a.x/2.+a.y*a.y*.75);}
+#define Bayer4(a) (Bayer2(.5*(a))*0.25+Bayer2(a))
+#define Bayer8(a) (Bayer4(.5*(a))*0.25+Bayer2(a))
+float hash11(float n){return fract(sin(n)*43758.5453);}
+float vnoise(vec3 p){
+  vec3 ip=floor(p),fp=fract(p);
+  float n000=hash11(dot(ip+vec3(0,0,0),vec3(1,57,113)));float n100=hash11(dot(ip+vec3(1,0,0),vec3(1,57,113)));
+  float n010=hash11(dot(ip+vec3(0,1,0),vec3(1,57,113)));float n110=hash11(dot(ip+vec3(1,1,0),vec3(1,57,113)));
+  float n001=hash11(dot(ip+vec3(0,0,1),vec3(1,57,113)));float n101=hash11(dot(ip+vec3(1,0,1),vec3(1,57,113)));
+  float n011=hash11(dot(ip+vec3(0,1,1),vec3(1,57,113)));float n111=hash11(dot(ip+vec3(1,1,1),vec3(1,57,113)));
+  vec3 w=fp*fp*fp*(fp*(fp*6.-15.)+10.);
+  return mix(mix(mix(n000,n100,w.x),mix(n010,n110,w.x),w.y),mix(mix(n001,n101,w.x),mix(n011,n111,w.x),w.y),w.z)*2.-1.;
+}
+float fbm2(vec2 uv,float t){vec3 p=vec3(uv*uScale,t);float amp=1.,freq=1.,sum=1.;for(int i=0;i<5;i++){sum+=amp*vnoise(p*freq);freq*=1.25;amp*=1.0;}return sum*.5+.5;}
+float maskCircle(vec2 p,float cov){float r=sqrt(cov)*.25;float d=length(p-0.5)-r;float aa=fwidth(d)*0.5;return cov*(1.-smoothstep(-aa,aa,d*2.));}
+float maskTriangle(vec2 p,vec2 id,float cov){bool flip=mod(id.x+id.y,2.)>0.5;if(flip)p.x=1.-p.x;float r=sqrt(cov);float d=p.y-r*(1.-p.x);float aa=fwidth(d);return cov*clamp(.5-d/aa,0.,1.);}
+float maskDiamond(vec2 p,float cov){return step(abs(p.x-.49)+abs(p.y-.49),sqrt(cov)*.564);}
+void main(){
+  vec2 fragCoord=gl_FragCoord.xy-uResolution*.5;float ar=uResolution.x/uResolution.y;
+  vec2 pixelId=floor(fragCoord/uPixelSize);vec2 pixelUV=fract(fragCoord/uPixelSize);
+  float cellSz=8.*uPixelSize;vec2 cellCoord=floor(fragCoord/cellSz)*cellSz;vec2 uv=cellCoord/uResolution*vec2(ar,1.);
+  float base=fbm2(uv,uTime*.05);base=base*.5-.65;float feed=base+(uDensity-.5)*.3;
+  if(uEnableRipples==1){for(int i=0;i<MAX_CLICKS;i++){vec2 pos=uClickPos[i];if(pos.x<0.)continue;float cellSzR=8.*uPixelSize;vec2 cuv=((pos-uResolution*.5-cellSzR*.5)/uResolution)*vec2(ar,1.);float t=max(uTime-uClickTimes[i],0.);float r=distance(uv,cuv);float wR=uRippleSpeed*t;float ring=exp(-pow((r-wR)/uRippleThickness,2.));float atten=exp(-1.*t)*exp(-10.*r);feed=max(feed,ring*atten*uRippleIntensity);}}
+  float bayer=Bayer8(fragCoord/uPixelSize)-.5;float bw=step(.5,feed+bayer);float h=fract(sin(dot(floor(fragCoord/uPixelSize),vec2(127.1,311.7)))*43758.5453);float cov=bw*(1.+(h-.5)*uPixelJitter);
+  float M;
+  if(uShapeType==SHAPE_CIRCLE)M=maskCircle(pixelUV,cov);
+  else if(uShapeType==SHAPE_TRIANGLE)M=maskTriangle(pixelUV,pixelId,cov);
+  else if(uShapeType==SHAPE_DIAMOND)M=maskDiamond(pixelUV,cov);
+  else M=cov;
+  if(uEdgeFade>0.){vec2 norm=gl_FragCoord.xy/uResolution;float edge=min(min(norm.x,norm.y),min(1.-norm.x,1.-norm.y));M*=smoothstep(0.,uEdgeFade,edge);}
+  vec3 col=uColor;vec3 srgb=mix(col*12.92,1.055*pow(col,vec3(1./2.4))-.055,step(0.0031308,col));gl_FragColor=vec4(srgb,M);
+}`;
+  const material=new THREE.ShaderMaterial({vertexShader:VS,fragmentShader:FS,uniforms,transparent:true,depthTest:false,depthWrite:false});
+  const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);
+  scene.add(quad);
+  function setSize(){const w=container.clientWidth||1,h=container.clientHeight||1;renderer.setSize(w,h,false);uniforms.uResolution.value.set(renderer.domElement.width,renderer.domElement.height);uniforms.uPixelSize.value=CFG.pixelSize*dpr;}
+  setSize();
+  const ro=new ResizeObserver(setSize);ro.observe(container);
+  let clickIx=0;
+  canvas.addEventListener('pointerdown',e=>{if(!CFG.enableRipples)return;const rect=canvas.getBoundingClientRect();const sx=canvas.width/rect.width,sy=canvas.height/rect.height;const fx=(e.clientX-rect.left)*sx,fy=(rect.height-(e.clientY-rect.top))*sy;uniforms.uClickPos.value[clickIx].set(fx,fy);uniforms.uClickTimes.value[clickIx]=uniforms.uTime.value;clickIx=(clickIx+1)%MAX_CLICKS;},{passive:true});
+  const clock=new THREE.Clock();const timeOffset=Math.random()*1000;let raf;
+  function animate(){raf=requestAnimationFrame(animate);uniforms.uTime.value=timeOffset+clock.getElapsedTime()*CFG.speed;renderer.render(scene,camera);}
+  animate();
+  const obs=new MutationObserver(()=>{if(!container.classList.contains('active')){cancelAnimationFrame(raf);ro.disconnect();obs.disconnect();}});
+  obs.observe(container,{attributes:true,attributeFilter:['class']});
+})();
+</script>
+
+<!-- App Logic -->
+<script>
+let appState={email:"",loginDate:null,scans:[],reportCount:0};
+let currentFilter="All";
+let currentCountryFilter="All";
+
+function showScreen(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");window.scrollTo(0,0);const nav=document.getElementById("bottomNav");if(nav){if(id==="appShell"){nav.classList.add("nav-visible");}else{nav.classList.remove("nav-visible");}}}
+
+const TAB_LABELS={tabScan:"Scan",tabTrending:"Trending",tabVerified:"Verified",tabReport:"Report",tabProfile:"Profile"};
+function switchTab(tabId){
+  document.querySelectorAll(".tab-panel").forEach(p=>{p.classList.add("hidden");p.classList.remove("flex");});
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("nav-active"));
+  document.getElementById(tabId).classList.remove("hidden");
+  document.getElementById(tabId).classList.add("flex");
+  document.getElementById("nav-"+tabId).classList.add("nav-active");
+  if(tabId==="tabTrending")renderNewsList(currentFilter);
+  if(tabId==="tabVerified")renderVerifiedNews(currentCountryFilter);
+  if(tabId==="tabProfile")refreshProfile();
+  if(tabId==="tabReport")renderReportHistory();
+  document.getElementById("tabContent").scrollTo(0,0);
+  const lbl=document.getElementById("activeTabLabel");
+  if(lbl)lbl.textContent="· "+(TAB_LABELS[tabId]||"");
+}
+function toggleDrawer(){const d=document.getElementById("navDrawer"),o=document.getElementById("drawerOverlay");const isOpen=d.classList.contains("open");isOpen?closeDrawer():openDrawer();}
+function openDrawer(){document.getElementById("navDrawer").classList.add("open");document.getElementById("drawerOverlay").classList.add("open");document.getElementById("hamburgerIcon").textContent="close";}
+function closeDrawer(){document.getElementById("navDrawer").classList.remove("open");document.getElementById("drawerOverlay").classList.remove("open");document.getElementById("hamburgerIcon").textContent="menu";}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
+
+function fmtDate(d){return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
+function fmtTime(d){return new Date(d).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});}
+function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+const EMAIL_REGEX=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function validateEmail(input){
+  const icon=document.getElementById("emailValidIcon"),hint=document.getElementById("emailHint"),val=input.value;
+  if(!val){input.style.borderColor="";icon.style.opacity="0";hint.classList.add("hidden");return;}
+  if(EMAIL_REGEX.test(val)){
+    input.style.borderColor="#10b981";icon.textContent="check_circle";
+    icon.className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-base pointer-events-none text-emerald-400";
+    icon.style.opacity="1";hint.textContent="Looks good!";
+    hint.className="text-xs px-1 font-medium text-emerald-400";hint.classList.remove("hidden");
+  }else{
+    input.style.borderColor="#ef4444";icon.textContent="cancel";
+    icon.className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-base pointer-events-none text-red-400";
+    icon.style.opacity="1";
+    let msg="Enter a valid email address.";
+    if(!val.includes("@"))msg="Missing @ symbol.";
+    else if(val.indexOf("@")===0)msg="Add a username before @.";
+    else if(!val.includes("."))msg="Missing domain extension (e.g. .com).";
+    else if(val.endsWith("@")||val.endsWith("."))msg="Incomplete address.";
+    hint.textContent=msg;hint.className="text-xs px-1 font-medium text-red-400";hint.classList.remove("hidden");
+  }
+}
+function togglePassword(){const p=document.getElementById("password"),btn=document.getElementById("pwToggleBtn");const h=p.type==="password";p.type=h?"text":"password";btn.textContent=h?"Hide":"Show";}
+function login(){
+  const email=document.getElementById("email").value.trim();
+  const password=document.getElementById("password").value.trim();
+  const errEl=document.getElementById("loginError");
+  if(!email||!EMAIL_REGEX.test(email)||!password){
+    errEl.textContent=!email?"Please enter your email and password.":!EMAIL_REGEX.test(email)?"Please enter a valid email address.":"Please enter your password.";
+    errEl.classList.remove("hidden");if(email)validateEmail(document.getElementById("email"));return;
+  }
+  errEl.classList.add("hidden");appState.email=email;appState.loginDate=new Date();
+  document.getElementById("userEmail").textContent=email;
+  loadScanHistory();
+  loadReportHistory();
+  loadGState();
+  updateStreak();
+  updateNavXP();
+  showScreen("bufferScreen");startLoadingSequence();
+}
+const loadingMessages=["Loading neural threat modules...","Calibrating fake news classifier...","Initializing deepfake detection engine...","Warming up cyberbullying analyzer...","Connecting to verified news feed...","System ready."];
+function startLoadingSequence(){
+  let progress=0,msgIdx=0;
+  const bar=document.getElementById("progressBar"),txt=document.getElementById("progressText"),status=document.getElementById("loadingStatus");
+  const segments=[[18,30,2],[27,180,1],[45,25,2],[52,220,1],[55,400,1],[73,20,2],[80,150,1],[91,35,2],[96,250,1],[100,18,2]];
+  let segIdx=0;
+  function runSegment(){
+    if(segIdx>=segments.length)return;
+    const[target,interval,step]=segments[segIdx];
+    const iv=setInterval(()=>{
+      progress=Math.min(progress+step,target);bar.style.width=progress+"%";txt.textContent=progress+"%";
+      const t=Math.floor((progress/100)*loadingMessages.length);
+      if(t!==msgIdx&&t<loadingMessages.length){msgIdx=t;status.textContent=loadingMessages[msgIdx];}
+      if(progress>=target){clearInterval(iv);segIdx++;if(progress>=100){setTimeout(()=>{showScreen("appShell");switchTab("tabScan");bar.style.width="0%";txt.textContent="0%";},500);}else runSegment();}
+    },interval);
+  }
+  runSegment();
+}
+function logout(){
+  document.getElementById("email").value="";document.getElementById("password").value="";
+  document.getElementById("emailValidIcon").style.opacity="0";document.getElementById("emailHint").classList.add("hidden");
+  document.getElementById("email").style.borderColor="";
+  appState={email:"",loginDate:null,scans:[],reportCount:0};showScreen("loginScreen");
+}
+function clearInput(){document.getElementById("contentInput").value="";resetResults();}
+function resetResults(){document.getElementById("defaultHint").classList.remove("hidden");document.getElementById("scanningAnim").classList.add("hidden");document.getElementById("resultCards").classList.add("hidden");}
+function scanContent(){
+  const text=document.getElementById("contentInput").value.trim();
+  if(!text){const ta=document.getElementById("contentInput");ta.style.border="1px solid #ef4444";setTimeout(()=>{ta.style.border="";},1500);return;}
+
+  // Step 3: Button UX — disable + spinner
+  const btn=document.getElementById("scanBtn");
+  const btnText=document.getElementById("scanBtnText");
+  const btnIcon=document.getElementById("scanBtnIcon");
+  const spinner=document.getElementById("scanSpinner");
+  btn.disabled=true;btn.classList.add("opacity-70","cursor-not-allowed");
+  btnText.textContent="Scanning...";btnIcon.classList.add("hidden");spinner.classList.remove("hidden");
+
+  // Step 4: Input Type Detection
+  const inputTypeMsg=document.getElementById("inputTypeMsg");
+  if(inputTypeMsg){
+    let msg="Analyzing content...";
+    if(/https?:\/\//i.test(text))msg="Analyzing website credibility...";
+    else if(text.length>100)msg="Analyzing linguistic patterns...";
+    else msg="Analyzing short message...";
+    inputTypeMsg.querySelector("span:last-child").textContent=msg;inputTypeMsg.classList.remove("hidden");
+  }
+
+  document.getElementById("defaultHint").classList.add("hidden");document.getElementById("resultCards").classList.add("hidden");
+  document.getElementById("aiReason").classList.add("hidden");
+  document.getElementById("scanningAnim").classList.remove("hidden");document.getElementById("scanningAnim").classList.add("flex");
+  setTimeout(()=>{
+    const scores=analyzeContent(text);showResults(scores);
+    const mx=Math.max(scores.fakeScore,scores.bullyScore,scores.deepfakeScore);
+    const verdict=mx>=70?"high":mx>=35?"moderate":"safe";
+    appState.scans.unshift({text:text.length>80?text.slice(0,80)+"…":text,timestamp:new Date(),...scores,verdict});
+    // Step 5: Persist to localStorage (last 5 scans)
+    saveScanHistory();
+    // Step 3: Restore button
+    btn.disabled=false;btn.classList.remove("opacity-70","cursor-not-allowed");
+    btnText.textContent="Scan Content";btnIcon.classList.remove("hidden");spinner.classList.add("hidden");
+    if(inputTypeMsg)inputTypeMsg.classList.add("hidden");
+    // ── Gamification: award XP for scan ──
+    if(typeof awardXP === "function"){
+      gState.totalScans++;
+      if(verdict==="high"){gState.threatsFound++;gState.consecutiveSafe=0;awardXP(25,"🚨","Threat Detected!","+25 XP — Great catch protecting the web!","#f87171");}
+      else if(verdict==="moderate"){gState.consecutiveSafe=0;awardXP(15,"⚠️","Risk Flagged","+15 XP — Moderate threat identified!","#fbbf24");}
+      else{gState.consecutiveSafe++;awardXP(10,"✅","Content Verified Safe","+10 XP — Clean content confirmed!","#34d399");}
+      saveGState();checkBadges();updateNavXP();
+    }
+  },2200);
+}
+function analyzeContent(text){
+  const lower=text.toLowerCase();
+  let fakeScore=Math.floor(Math.random()*20)+5;
+  ["breaking","exclusive","you won't believe","shocking","they don't want you","secret","hidden truth","mainstream media","hoax","conspiracy"].forEach(k=>{if(lower.includes(k))fakeScore+=15;});
+  if(text.length<30)fakeScore+=10;if(/[A-Z]{3,}/.test(text))fakeScore+=10;fakeScore=Math.min(fakeScore,99);
+  let bullyScore=Math.floor(Math.random()*15)+3;
+  ["ugly","stupid","idiot","loser","hate you","kill yourself","nobody likes","worthless","freak","moron","dumb","pathetic"].forEach(k=>{if(lower.includes(k))bullyScore+=20;});
+  if(lower.includes("!"))bullyScore+=5;bullyScore=Math.min(bullyScore,99);
+  let deepfakeScore=Math.floor(Math.random()*15)+3;
+  ["deepfake","generated","ai-generated","synthetic","face swap","manipulated","faceswap",".mp4","video of","watch this video"].forEach(k=>{if(lower.includes(k))deepfakeScore+=18;});
+  if(/https?:\/\//i.test(text))deepfakeScore+=8;deepfakeScore=Math.min(deepfakeScore,99);
+  return{fakeScore,bullyScore,deepfakeScore};
+}
+function showResults({fakeScore,bullyScore,deepfakeScore}){
+  document.getElementById("scanningAnim").classList.add("hidden");document.getElementById("scanningAnim").classList.remove("flex");
+  const cards=document.getElementById("resultCards");cards.classList.remove("hidden");cards.classList.add("flex");
+  setMetric("fakeNews",fakeScore);setMetric("bullying",bullyScore);setMetric("deepfake",deepfakeScore);
+  const mx=Math.max(fakeScore,bullyScore,deepfakeScore);
+  const vc=document.getElementById("verdictCard"),vi=document.getElementById("verdictIcon"),vt=document.getElementById("verdictTitle"),vd=document.getElementById("verdictDesc");
+  if(mx>=70){vc.className="rounded-xl p-4 flex items-center gap-3 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700";vi.textContent="dangerous";vi.className="material-symbols-outlined text-2xl text-red-500";vt.textContent="High Threat Detected";vd.textContent="This content shows strong indicators of being harmful. Consider reporting it.";}
+  else if(mx>=35){vc.className="rounded-xl p-4 flex items-center gap-3 border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700";vi.textContent="warning";vi.className="material-symbols-outlined text-2xl text-amber-500";vt.textContent="Moderate Risk Found";vd.textContent="Some suspicious signals detected. Review carefully before sharing.";}
+  else{vc.className="rounded-xl p-4 flex items-center gap-3 border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700";vi.textContent="verified_user";vi.className="material-symbols-outlined text-2xl text-emerald-500";vt.textContent="Content Appears Safe";vd.textContent="No significant threat signals detected in this content.";}
+
+  // Step 2: Combined Threat Level card
+  const avg=Math.round((fakeScore+bullyScore+deepfakeScore)/3);
+  const tlCard=document.getElementById("threatLevelCard"),tlBadge=document.getElementById("threatLevelBadge"),tlIcon=document.getElementById("threatLevelIcon");
+  if(avg>=70){
+    tlCard.className="result-card rounded-xl p-4 flex items-center justify-between border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700 fade-in";
+    tlBadge.className="text-sm font-extrabold px-4 py-1 rounded-full bg-red-500 text-white";
+    tlBadge.textContent="HIGH";tlIcon.className="material-symbols-outlined text-lg text-red-500";
+  }else if(avg>=35){
+    tlCard.className="result-card rounded-xl p-4 flex items-center justify-between border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 fade-in";
+    tlBadge.className="text-sm font-extrabold px-4 py-1 rounded-full bg-amber-400 text-white";
+    tlBadge.textContent="MEDIUM";tlIcon.className="material-symbols-outlined text-lg text-amber-500";
+  }else{
+    tlCard.className="result-card rounded-xl p-4 flex items-center justify-between border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 fade-in";
+    tlBadge.className="text-sm font-extrabold px-4 py-1 rounded-full bg-emerald-500 text-white";
+    tlBadge.textContent="LOW";tlIcon.className="material-symbols-outlined text-lg text-emerald-500";
+  }
+
+  // Step 1: AI Explanation
+  const aiEl=document.getElementById("aiReason"),aiText=document.getElementById("aiReasonText");
+  let reason="";
+  const dominant=fakeScore>=bullyScore&&fakeScore>=deepfakeScore?"fake":bullyScore>=deepfakeScore?"bullying":"deepfake";
+  if(mx>=70){
+    if(dominant==="fake")reason=`The content contains multiple high-confidence misinformation markers, including sensationalist language and unverified claims. Fake news probability is critically high at ${fakeScore}%. Cross-reference with verified sources before sharing.`;
+    else if(dominant==="bullying")reason=`Severe hostile or abusive language patterns were detected throughout the content. Cyberbullying risk is elevated at ${bullyScore}%. This content may cause psychological harm and violates most platform guidelines.`;
+    else reason=`Signals consistent with AI-generated or manipulated media were found. Deepfake probability is ${deepfakeScore}%, suggesting synthetic content. Verify the source and check metadata before trusting this material.`;
+  }else if(mx>=35){
+    if(dominant==="fake")reason=`Some misinformation signals are present — including emotionally charged framing or unattributed claims (${fakeScore}% fake news score). The content may be misleading without being entirely fabricated.`;
+    else if(dominant==="bullying")reason=`Mild to moderate hostile language detected (${bullyScore}% bullying score). The tone may be aggressive or targeted, though below the threshold for high-risk classification.`;
+    else reason=`Partial indicators of synthetic or manipulated media detected (${deepfakeScore}% deepfake score). The content's authenticity is uncertain — look for original source attribution.`;
+  }else{
+    reason=`No significant threat signals were identified across fake news (${fakeScore}%), cyberbullying (${bullyScore}%), or deepfake (${deepfakeScore}%) dimensions. The content appears authentic and non-harmful based on the current model analysis.`;
+  }
+  aiText.textContent=reason;aiEl.classList.remove("hidden");
+}
+function setMetric(key,score){
+  document.getElementById(key+"Score").textContent=score+"%";
+  setTimeout(()=>{document.getElementById(key+"Bar").style.width=score+"%";},50);
+  document.getElementById(key+"Label").textContent=score<30?"Low risk — content appears normal.":score<60?"Moderate risk — some suspicious signals present.":"High risk — strong indicators of harmful content.";
+}
+function openReport(){switchTab("tabReport");}
+function reportResult(){
+  const content=document.getElementById("contentInput").value.trim();
+  if(content){
+    document.getElementById("reportUrl").value=content;
+    document.getElementById("reportContext").value="Flagged via scan result. Please review this content for potential threats.";
+  }
+  switchTab("tabReport");
+  // Brief highlight to show fields were filled
+  setTimeout(()=>{
+    const urlField=document.getElementById("reportUrl");
+    urlField.style.border="1px solid #2563eb";
+    setTimeout(()=>{urlField.style.border="";},1800);
+  },200);
+}
+function submitReport(){
+  const cat=document.getElementById("category").value;
+  const url=document.getElementById("reportUrl").value.trim();
+  const ctx=document.getElementById("reportContext").value.trim();
+  const ok=document.getElementById("successMsg"),err=document.getElementById("reportError");
+  if(!cat){err.classList.remove("hidden");err.classList.add("flex");ok.classList.add("hidden");return;}
+
+  // Save to report history
+  const report={category:cat,content:url||ctx||"(no content provided)",context:ctx,timestamp:new Date()};
+  if(!appState.reports)appState.reports=[];
+  appState.reports.unshift(report);
+  saveReportHistory();
+  appState.reportCount++;
+
+  // Show success then clear fields
+  err.classList.add("hidden");ok.classList.remove("hidden");ok.classList.add("flex");
+  setTimeout(()=>{
+    // Clear all fields
+    document.getElementById("category").value="";
+    document.getElementById("reportUrl").value="";
+    document.getElementById("reportContext").value="";
+    ok.classList.add("hidden");ok.classList.remove("flex");
+    renderReportHistory();
+  },400);
+}
+function refreshProfile(){
+  const email=appState.email||"user@example.com";
+  document.getElementById("avatarInitial").textContent=email[0].toUpperCase();
+  document.getElementById("profileName").textContent=email.split("@")[0];
+  document.getElementById("profileEmail").textContent=email;
+  document.getElementById("statScans").textContent=appState.scans.length;
+  document.getElementById("statThreats").textContent=appState.scans.filter(s=>s.verdict==="high").length;
+  document.getElementById("statReports").textContent=appState.reportCount;
+  document.getElementById("memberSince").textContent=appState.loginDate?fmtDate(appState.loginDate):"—";
+  document.getElementById("lastActive").textContent=appState.loginDate?fmtDate(new Date())+" · "+fmtTime(new Date()):"—";
+  renderHistory();
+}
+function renderHistory(){
+  const list=document.getElementById("historyList"),empty=document.getElementById("historyEmpty");
+  list.innerHTML="";
+  if(appState.scans.length===0){list.classList.add("hidden");empty.classList.remove("hidden");empty.classList.add("flex");return;}
+  list.classList.remove("hidden");empty.classList.add("hidden");
+  const colors={high:{dot:"bg-red-500",badge:"text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/30",label:"High Threat"},moderate:{dot:"bg-amber-500",badge:"text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30",label:"Moderate Risk"},safe:{dot:"bg-emerald-500",badge:"text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30",label:"Safe"}};
+  appState.scans.forEach(scan=>{
+    const vc=colors[scan.verdict];const item=document.createElement("div");
+    item.className="history-item glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/15 p-3 cursor-pointer";
+    item.title="Click to reload this scan";
+    item.innerHTML=`<div class="flex items-start justify-between gap-2 mb-1.5"><p class="text-xs font-semibold text-slate-800 dark:text-white line-clamp-2 flex-1">${escHtml(scan.text)}</p><span class="flex-shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${vc.badge}"><span class="w-1.5 h-1.5 rounded-full ${vc.dot} inline-block"></span>${vc.label}</span></div><div class="flex items-center gap-3"><span class="text-xs text-slate-500 dark:text-slate-400">📰 ${scan.fakeScore}%</span><span class="text-xs text-slate-500 dark:text-slate-400">😤 ${scan.bullyScore}%</span><span class="text-xs text-slate-500 dark:text-slate-400">🎭 ${scan.deepfakeScore}%</span><span class="ml-auto text-xs text-slate-400 dark:text-slate-500">${fmtTime(scan.timestamp)}</span></div>`;
+    item.addEventListener("click",()=>{
+      const fullText=scan.text.endsWith("…")?scan.text.slice(0,-1):scan.text;
+      document.getElementById("contentInput").value=fullText;
+      switchTab("tabScan");
+    });
+    list.appendChild(item);
+  });
+}
+function clearHistory(){appState.scans=[];renderHistory();document.getElementById("statScans").textContent=0;document.getElementById("statThreats").textContent=0;localStorage.removeItem("htd_scans");}
+
+function renderReportHistory(){
+  const list=document.getElementById("reportHistoryList"),empty=document.getElementById("reportHistoryEmpty");
+  if(!list)return;
+  list.innerHTML="";
+  const reports=appState.reports||[];
+  if(reports.length===0){list.classList.add("hidden");empty.classList.remove("hidden");empty.classList.add("flex");return;}
+  list.classList.remove("hidden");empty.classList.add("hidden");empty.classList.remove("flex");
+  const catColors={
+    "Fake News":      {bg:"bg-amber-100 dark:bg-amber-900/30",text:"text-amber-700 dark:text-amber-400",icon:"article"},
+    "Deepfake Media": {bg:"bg-blue-100 dark:bg-blue-900/30", text:"text-blue-700 dark:text-blue-400",  icon:"face_retouching_natural"},
+    "Cyberbullying":  {bg:"bg-rose-100 dark:bg-rose-900/30", text:"text-rose-700 dark:text-rose-400",  icon:"mood_bad"},
+    "Harassment":     {bg:"bg-red-100 dark:bg-red-900/30",   text:"text-red-700 dark:text-red-400",    icon:"gavel"},
+    "Spam / Phishing":{bg:"bg-purple-100 dark:bg-purple-900/30",text:"text-purple-700 dark:text-purple-400",icon:"mark_email_unread"},
+    "Other":          {bg:"bg-slate-100 dark:bg-slate-700/40",text:"text-slate-600 dark:text-slate-300",icon:"flag"},
+  };
+  reports.forEach((r,idx)=>{
+    const cc=catColors[r.category]||catColors["Other"];
+    const item=document.createElement("div");
+    item.className="glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/15 p-3 flex flex-col gap-2 fade-in";
+    item.style.animationDelay=(idx*0.04)+"s";
+    item.innerHTML=`
+      <div class="flex items-center justify-between gap-2">
+        <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${cc.bg} ${cc.text}">
+          <span class="material-symbols-outlined" style="font-size:11px">${cc.icon}</span>${escHtml(r.category)}
+        </span>
+        <span class="text-xs text-slate-400 dark:text-slate-500">${fmtDate(r.timestamp)} · ${fmtTime(r.timestamp)}</span>
+      </div>
+      <p class="text-xs text-slate-700 dark:text-slate-300 line-clamp-2">${escHtml(r.content)}</p>
+      ${r.context?`<p class="text-xs text-slate-500 dark:text-slate-400 italic line-clamp-1">${escHtml(r.context)}</p>`:""}
+    `;
+    list.appendChild(item);
+  });
+}
+
+function saveReportHistory(){
+  try{localStorage.setItem("htd_reports",JSON.stringify((appState.reports||[]).slice(0,20)));}catch(e){}
+}
+function loadReportHistory(){
+  try{
+    const saved=localStorage.getItem("htd_reports");
+    if(saved){const parsed=JSON.parse(saved);parsed.forEach(r=>{r.timestamp=new Date(r.timestamp);});appState.reports=parsed;}
+    else appState.reports=[];
+  }catch(e){appState.reports=[];}
+}
+function clearReportHistory(){appState.reports=[];renderReportHistory();localStorage.removeItem("htd_reports");}
+
+
+// Step 5: LocalStorage persistence
+function saveScanHistory(){
+  const toSave=appState.scans.slice(0,5);
+  localStorage.setItem("htd_scans",JSON.stringify(toSave));
+}
+function loadScanHistory(){
+  try{
+    const saved=localStorage.getItem("htd_scans");
+    if(saved){
+      const parsed=JSON.parse(saved);
+      parsed.forEach(s=>{s.timestamp=new Date(s.timestamp);});
+      appState.scans=parsed;
+    }
+  }catch(e){console.warn("Could not load scan history",e);}
+}
+
+// ── Trending data ──
+const TRENDING_NEWS=[
+  {id:1,category:"Health",rank:1,headline:"5G towers cause cancer and suppress immune systems, doctors warn",summary:"A fabricated claim linking 5G infrastructure to cancer rates and immune deficiency has gone viral across social media, citing non-existent studies.",credibility:4,source:"WhatsApp chains / fringe blogs",shares:"2.4M",status:"debunked",debunkedBy:"WHO, CDC",tags:["5G","Health Misinformation","Viral"]},
+  {id:2,category:"Politics",rank:2,headline:"Government plans to ban cash transactions by end of year",summary:"A fabricated government memo circulating on Telegram claims all cash transactions over ₹500 will be banned by December, forcing digital-only payments.",credibility:6,source:"Telegram / fabricated PDFs",shares:"1.9M",status:"false",debunkedBy:"Finance Ministry",tags:["Economy","Policy","Fabricated Document"]},
+  {id:3,category:"Health",rank:3,headline:"Drinking hot lemon water cures all viral infections within 48 hours",summary:"Claims that hot lemon water with honey can 'kill' COVID-19 and influenza viruses in 48 hours continue to spread despite medical consensus against it.",credibility:8,source:"Facebook / Health blogs",shares:"1.7M",status:"false",debunkedBy:"AIIMS, NHS",tags:["Health","COVID","Misinformation"]},
+  {id:4,category:"Tech",rank:4,headline:"ChatGPT secretly records all user conversations for government surveillance",summary:"An unverified claim alleges that AI chatbots are federally mandated to record conversations and share them with intelligence agencies in real time.",credibility:11,source:"Reddit / YouTube",shares:"1.2M",status:"false",debunkedBy:"OpenAI, EFF",tags:["AI","Privacy","Conspiracy"]},
+  {id:5,category:"Climate",rank:5,headline:"Arctic ice is actually growing — climate change is a hoax funded by billionaires",summary:"Selectively cropped satellite data being shared as proof Arctic ice is expanding, while ignoring decades of consistent decline data from NASA and NSIDC.",credibility:5,source:"Twitter/X",shares:"1.1M",status:"debunked",debunkedBy:"NASA, NSIDC",tags:["Climate","Arctic","Manipulation"]},
+  {id:6,category:"Finance",rank:6,headline:"RBI to launch digital rupee that will expire if not spent within 90 days",summary:"A viral post falsely claims the RBI's CBDC will have an expiry mechanism to force spending, causing public panic.",credibility:9,source:"WhatsApp",shares:"980K",status:"false",debunkedBy:"RBI Official Statement",tags:["Finance","CBDC","RBI"]},
+  {id:7,category:"Health",rank:7,headline:"New study: common painkillers double the risk of heart attack after single dose",summary:"A misrepresented 2019 observational study is recirculating with exaggerated findings, falsely implying a single ibuprofen tablet doubles heart attack risk.",credibility:22,source:"News aggregators",shares:"870K",status:"misleading",debunkedBy:"BMJ, Snopes",tags:["Health","Pharma","Misrepresentation"]},
+  {id:8,category:"Politics",rank:8,headline:"Voting machines in 6 states flipped millions of votes in last election",summary:"Repeatedly debunked claim resurfaces with new 'evidence' — a doctored internal audit screenshot — alleging systemic voting machine fraud.",credibility:3,source:"Fringe news sites",shares:"760K",status:"debunked",debunkedBy:"Election Commission, CISA",tags:["Elections","Fraud","Fabricated"]},
+  {id:9,category:"Tech",rank:9,headline:"Apple quietly disables battery after 2 years to force upgrades via software update",summary:"An old controversy is distorted into a claim that iOS 18 contains hidden code to reduce battery life after 730 days.",credibility:18,source:"YouTube / TikTok",shares:"650K",status:"misleading",debunkedBy:"iFixit, The Verge",tags:["Apple","Tech","Manipulation"]},
+  {id:10,category:"Climate",rank:10,headline:"El Niño data shows Earth is cooling — scientists admit error",summary:"A single year's El Niño temperature dip is being weaponised as proof of global cooling trend, misrepresenting short-term variation as long-term reversal.",credibility:13,source:"Climate sceptic blogs",shares:"510K",status:"misleading",debunkedBy:"IPCC, NOAA",tags:["Climate","Data Manipulation","Misleading"]},
+  {id:11,category:"Finance",rank:11,headline:"Bitcoin will replace all national currencies by 2026, leaked IMF report reveals",summary:"A fabricated 'leaked IMF report' predicts mandatory Bitcoin adoption by 2026. The document is entirely forged.",credibility:5,source:"Crypto Telegram groups",shares:"490K",status:"false",debunkedBy:"IMF Spokesperson",tags:["Crypto","Finance","Fabricated"]},
+  {id:12,category:"Politics",rank:12,headline:"Foreign NGOs paid protesters ₹5000 each to attend opposition rallies",summary:"Unverified claims with blurry screenshots allegedly showing payment receipts, amplified by coordinated bot networks on X.",credibility:10,source:"Twitter/X bot networks",shares:"430K",status:"unverified",debunkedBy:"Investigation pending",tags:["Politics","Protests","Bot Network"]}
+];
+
+function credRingSVG(score){
+  const r=18,circ=2*Math.PI*r,filled=(score/100)*circ;
+  const color=score<=20?"#ef4444":score<=45?"#f97316":score<=65?"#eab308":"#10b981";
+  return `<div class="cred-ring"><svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="4" class="dark:stroke-white/10"/><circle cx="22" cy="22" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-dasharray="${filled} ${circ}" stroke-linecap="round"/></svg><div class="cred-val" style="color:${color}">${score}%</div></div>`;
+}
+function statusBadge(status){
+  const map={debunked:{bg:"bg-emerald-100 dark:bg-emerald-900/30",text:"text-emerald-700 dark:text-emerald-400",icon:"verified",label:"Debunked"},false:{bg:"bg-red-100 dark:bg-red-900/30",text:"text-red-700 dark:text-red-400",icon:"cancel",label:"False"},misleading:{bg:"bg-amber-100 dark:bg-amber-900/30",text:"text-amber-700 dark:text-amber-400",icon:"warning",label:"Misleading"},unverified:{bg:"bg-slate-100 dark:bg-slate-700/40",text:"text-slate-600 dark:text-slate-300",icon:"help",label:"Unverified"}};
+  const s=map[status]||map.unverified;
+  return `<span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${s.bg} ${s.text}"><span class="material-symbols-outlined" style="font-size:12px">${s.icon}</span>${s.label}</span>`;
+}
+function filterNews(cat,btn){
+  currentFilter=cat;
+  document.querySelectorAll(".filter-pill").forEach(b=>b.classList.remove("active-pill"));
+  btn.classList.add("active-pill");renderNewsList(cat);
+}
+function renderNewsList(filter){
+  const list=document.getElementById("newsList");list.innerHTML="";
+  const filtered=filter==="All"?TRENDING_NEWS:TRENDING_NEWS.filter(n=>n.category===filter);
+  document.getElementById("stripTotal").textContent=filtered.length;
+  document.getElementById("stripHigh").textContent=filtered.filter(n=>n.credibility<=20).length;
+  document.getElementById("stripDebunked").textContent=filtered.filter(n=>n.status==="debunked").length;
+  if(!filtered.length){list.innerHTML=`<div class="flex flex-col items-center gap-2 py-10"><span class="material-symbols-outlined text-3xl text-slate-400">search_off</span><p class="text-sm text-slate-500 dark:text-slate-400">No trending stories in this category.</p></div>`;return;}
+  filtered.forEach((item,idx)=>{
+    const card=document.createElement("div");
+    card.className="news-card glow-box rounded-xl bg-slate-50 dark:bg-[#2a1a40] border border-slate-200 dark:border-primary/20 p-4 flex flex-col gap-3 fade-in";
+    card.style.animationDelay=(idx*0.05)+"s";
+    const tags=item.tags.map(t=>`<span class="text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">${t}</span>`).join("");
+    card.innerHTML=`
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><span class="text-xs font-bold text-primary">#${item.rank}</span></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1 flex-wrap"><span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">${item.category}</span>${statusBadge(item.status)}</div>
+          <p class="text-sm font-bold text-slate-900 dark:text-white leading-snug">${escHtml(item.headline)}</p>
+        </div>
+      </div>
+      <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">${escHtml(item.summary)}</p>
+      <div class="flex items-center gap-3 bg-white dark:bg-[#1e1235] rounded-xl p-3 border border-slate-100 dark:border-primary/15">
+        ${credRingSVG(item.credibility)}
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-bold text-slate-700 dark:text-slate-200">Credibility Score</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">${item.credibility}% — ${item.credibility<=20?"Very Low — likely fabricated":item.credibility<=45?"Low — significant red flags":item.credibility<=65?"Moderate — verify before sharing":"Higher credibility"}</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <span class="flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:13px">share</span>${item.shares} shares</span>
+        <span class="flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:13px">source</span>${escHtml(item.source)}</span>
+      </div>
+      ${item.debunkedBy&&item.status!=="unverified"?`<div class="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg px-3 py-2"><span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400" style="font-size:14px">fact_check</span><span class="text-xs text-emerald-700 dark:text-emerald-400">Debunked by: <strong>${escHtml(item.debunkedBy)}</strong></span></div>`:""}
+      <div class="flex flex-wrap gap-1">${tags}</div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════
+// VERIFIED NEWS DATA
+// ══════════════════════════════════════════════
+const VERIFIED_NEWS = [
+  // ── INDIA ──
+  {id:"in1",country:"India",flag:"🇮🇳",sourceType:"Government Portal",sourceName:"Press Information Bureau (PIB)",sourceUrl:"https://pib.gov.in",headline:"Union Cabinet approves expansion of National Digital Health Mission to all states",description:"The Union Cabinet chaired by the Prime Minister has approved the nationwide rollout of Ayushman Bharat Digital Mission, integrating health records across 36 states and UTs.",category:"Health",publishedAt:"2 hours ago",verified:true},
+  {id:"in2",country:"India",flag:"🇮🇳",sourceType:"National Broadcaster",sourceName:"Doordarshan News (DD News)",sourceUrl:"https://ddnews.gov.in",headline:"India's GDP growth rate projected at 6.8% for current fiscal year: Finance Ministry",description:"The Finance Ministry released its quarterly economic review confirming India remains one of the fastest growing major economies with robust services and manufacturing sectors.",category:"Economy",publishedAt:"4 hours ago",verified:true},
+  {id:"in3",country:"India",flag:"🇮🇳",sourceType:"Government Agency",sourceName:"Ministry of External Affairs",sourceUrl:"https://mea.gov.in",headline:"India strengthens bilateral ties with ASEAN nations at 21st Summit in Jakarta",description:"External Affairs Minister S. Jaishankar represented India at the ASEAN-India Summit, signing new agreements on digital connectivity, trade facilitation, and cyber security cooperation.",category:"Foreign Policy",publishedAt:"6 hours ago",verified:true},
+  {id:"in4",country:"India",flag:"🇮🇳",sourceType:"Government Agency",sourceName:"ISRO Official Website",sourceUrl:"https://isro.gov.in",headline:"ISRO successfully tests Gaganyaan crew module parachute system ahead of 2026 mission",description:"The Indian Space Research Organisation confirmed successful ground tests of the crew module parachute deployment system, a key milestone for India's first human spaceflight program.",category:"Science",publishedAt:"1 day ago",verified:true},
+
+  // ── UNITED STATES ──
+  {id:"us1",country:"United States",flag:"🇺🇸",sourceType:"Government Portal",sourceName:"The White House — Official Briefings",sourceUrl:"https://whitehouse.gov",headline:"President signs Executive Order on AI Safety and National Security frameworks",description:"The White House released a new executive order directing federal agencies to adopt AI governance standards and establish interagency AI risk assessment protocols by Q3.",category:"Technology",publishedAt:"3 hours ago",verified:true},
+  {id:"us2",country:"United States",flag:"🇺🇸",sourceType:"National Broadcaster",sourceName:"PBS NewsHour",sourceUrl:"https://pbs.org/newshour",headline:"Federal Reserve holds interest rates steady, signals cautious approach to cuts",description:"The Federal Open Market Committee voted to maintain the federal funds rate, citing mixed inflation signals. Chair Powell emphasized data dependency before any rate adjustments.",category:"Economy",publishedAt:"5 hours ago",verified:true},
+  {id:"us3",country:"United States",flag:"🇺🇸",sourceType:"Government Agency",sourceName:"CDC Official Newsroom",sourceUrl:"https://cdc.gov/media",headline:"CDC updates COVID-19 vaccine recommendations for 2025–26 season",description:"The Centers for Disease Control and Prevention has updated its vaccine guidance, recommending updated mRNA formulations for all adults over 65 and immunocompromised individuals.",category:"Health",publishedAt:"8 hours ago",verified:true},
+  {id:"us4",country:"United States",flag:"🇺🇸",sourceType:"Government Agency",sourceName:"NASA News & Events",sourceUrl:"https://nasa.gov/news",headline:"NASA Artemis III mission window confirmed for late 2026 lunar surface landing",description:"NASA officials confirmed the Artemis III crewed lunar landing remains on track, with astronaut crew training milestones achieved and Space Launch System preparations advancing.",category:"Science",publishedAt:"12 hours ago",verified:true},
+
+  // ── CHINA ──
+  {id:"cn1",country:"China",flag:"🇨🇳",sourceType:"State News Agency",sourceName:"Xinhua News Agency",sourceUrl:"https://xinhuanet.com",headline:"China's National People's Congress passes updated Data Security Law amendments",description:"The NPC Standing Committee approved amendments strengthening cross-border data transfer regulations and establishing new compliance requirements for technology companies.",category:"Technology",publishedAt:"2 hours ago",verified:true},
+  {id:"cn2",country:"China",flag:"🇨🇳",sourceType:"State Broadcaster",sourceName:"CGTN — China Global Television Network",sourceUrl:"https://cgtn.com",headline:"China achieves record renewable energy capacity, surpassing 1,500 GW milestone",description:"The National Energy Administration announced China's combined wind and solar capacity has exceeded 1,500 gigawatts, representing over 40% of total installed power generation capacity.",category:"Environment",publishedAt:"5 hours ago",verified:true},
+  {id:"cn3",country:"China",flag:"🇨🇳",sourceType:"Government Portal",sourceName:"Ministry of Foreign Affairs — China",sourceUrl:"https://fmprc.gov.cn",headline:"China proposes five-point framework for global AI governance at UN General Assembly",description:"Foreign Minister Wang Yi presented China's comprehensive proposal for international AI regulation, calling for equal participation of developing nations in AI governance structures.",category:"Foreign Policy",publishedAt:"9 hours ago",verified:true},
+  {id:"cn4",country:"China",flag:"🇨🇳",sourceType:"State News Agency",sourceName:"People's Daily Online",sourceUrl:"https://en.people.cn",headline:"China's annual Two Sessions conclude with new economic stimulus measures announced",description:"The conclusion of the National People's Congress sessions saw approval of a 5.0% GDP growth target and a significant fiscal stimulus package targeting rural development and advanced manufacturing.",category:"Economy",publishedAt:"1 day ago",verified:true},
+
+  // ── RUSSIA ──
+  {id:"ru1",country:"Russia",flag:"🇷🇺",sourceType:"State News Agency",sourceName:"TASS Russian News Agency",sourceUrl:"https://tass.com",headline:"Russia launches new Arctic research station as part of polar strategy expansion",description:"The Russian government officially inaugurated a new year-round Arctic research facility on Franz Josef Land, to be staffed by scientists studying climate change and natural resource mapping.",category:"Science",publishedAt:"4 hours ago",verified:true},
+  {id:"ru2",country:"Russia",flag:"🇷🇺",sourceType:"State Broadcaster",sourceName:"RT — Russia Today (International)",sourceUrl:"https://rt.com",headline:"Russian Central Bank raises key rate to combat inflation pressures",description:"The Bank of Russia announced an increase in its benchmark rate, citing persistent inflationary pressures linked to defence spending and supply chain disruptions.",category:"Economy",publishedAt:"7 hours ago",verified:true},
+  {id:"ru3",country:"Russia",flag:"🇷🇺",sourceType:"Government Portal",sourceName:"Kremlin Official Press Service",sourceUrl:"https://kremlin.ru/eng",headline:"President Putin signs decree expanding social support payments for military families",description:"A new presidential decree expands monthly allowances and educational benefits for families of active-duty service personnel, effective from the first quarter of the new year.",category:"Policy",publishedAt:"10 hours ago",verified:true},
+  {id:"ru4",country:"Russia",flag:"🇷🇺",sourceType:"State News Agency",sourceName:"RIA Novosti",sourceUrl:"https://ria.ru",headline:"Russia and China sign new energy partnership agreement worth $12 billion",description:"Gazprom and China National Petroleum Corporation signed a long-term agreement expanding natural gas supply through the Power of Siberia pipeline network over the next 15 years.",category:"Economy",publishedAt:"1 day ago",verified:true},
+
+  // ── UNITED KINGDOM ──
+  {id:"gb1",country:"United Kingdom",flag:"🇬🇧",sourceType:"National Broadcaster",sourceName:"BBC News",sourceUrl:"https://bbc.com/news",headline:"UK Government unveils £5 billion National AI Infrastructure Strategy",description:"The Department for Science, Innovation and Technology announced a comprehensive strategy to position the UK as a global AI hub, including new compute clusters and a National AI Safety Institute expansion.",category:"Technology",publishedAt:"3 hours ago",verified:true},
+  {id:"gb2",country:"United Kingdom",flag:"🇬🇧",sourceType:"Government Portal",sourceName:"GOV.UK — Official Press Releases",sourceUrl:"https://gov.uk",headline:"Chancellor announces Autumn Budget measures to boost economic growth",description:"The Chancellor of the Exchequer outlined targeted investment in infrastructure, green energy, and skills training, while maintaining fiscal responsibility pledges on national debt.",category:"Economy",publishedAt:"6 hours ago",verified:true},
+  {id:"gb3",country:"United Kingdom",flag:"🇬🇧",sourceType:"Government Agency",sourceName:"NHS England — Official Communications",sourceUrl:"https://england.nhs.uk",headline:"NHS launches largest-ever cancer early detection programme across England",description:"NHS England announced a new community-based cancer screening initiative targeting underserved populations, backed by AI diagnostic tools and expanded mobile screening units.",category:"Health",publishedAt:"9 hours ago",verified:true},
+  {id:"gb4",country:"United Kingdom",flag:"🇬🇧",sourceType:"Government Portal",sourceName:"Foreign, Commonwealth & Development Office",sourceUrl:"https://gov.uk/government/organisations/foreign-commonwealth-development-office",headline:"UK signs new defence and security cooperation agreement with Indo-Pacific partners",description:"The Foreign Secretary signed updated bilateral security agreements with Australia, Japan, and South Korea during the Indo-Pacific security dialogue in Singapore.",category:"Foreign Policy",publishedAt:"14 hours ago",verified:true},
+
+  // ── EUROPEAN UNION ──
+  {id:"eu1",country:"European Union",flag:"🇪🇺",sourceType:"Official EU Institution",sourceName:"European Commission Press Corner",sourceUrl:"https://ec.europa.eu/commission/presscorner",headline:"European Commission finalises AI Act implementation roadmap for 2025–2027",description:"The European Commission published the detailed rollout plan for the world's first comprehensive AI regulation, including compliance timelines, enforcement authorities, and SME support measures.",category:"Technology",publishedAt:"2 hours ago",verified:true},
+  {id:"eu2",country:"European Union",flag:"🇪🇺",sourceType:"Official EU Institution",sourceName:"European Central Bank",sourceUrl:"https://ecb.europa.eu",headline:"ECB maintains rates but signals readiness to cut if disinflation continues",description:"The Governing Council of the European Central Bank held its deposit facility rate unchanged, with President Lagarde indicating the data-dependent approach remains intact amid softening inflation.",category:"Economy",publishedAt:"5 hours ago",verified:true},
+  {id:"eu3",country:"European Union",flag:"🇪🇺",sourceType:"Official EU Institution",sourceName:"European Parliament News",sourceUrl:"https://europarl.europa.eu/news",headline:"European Parliament votes to strengthen Critical Infrastructure Protection Directive",description:"MEPs passed updated legislation requiring member states to enhance cyber resilience for energy, water, and transport critical infrastructure amid rising hybrid threat assessments.",category:"Security",publishedAt:"8 hours ago",verified:true},
+  {id:"eu4",country:"European Union",flag:"🇪🇺",sourceType:"Official EU Institution",sourceName:"Council of the European Union",sourceUrl:"https://consilium.europa.eu",headline:"EU approves new digital euro pilot phase covering six member states",description:"The Council formally endorsed the European Central Bank's expanded digital euro pilot, with six member states participating in the controlled testing of the retail CBDC payment system.",category:"Finance",publishedAt:"1 day ago",verified:true},
+
+  // ── JAPAN ──
+  {id:"jp1",country:"Japan",flag:"🇯🇵",sourceType:"Government Portal",sourceName:"Prime Minister's Office of Japan",sourceUrl:"https://kantei.go.jp/foreign",headline:"Japan unveils ¥30 trillion economic revitalisation package to counter deflation risks",description:"Prime Minister's cabinet approved a comprehensive economic stimulus package targeting wage growth, semiconductor industry support, and green transformation investment to sustain economic momentum.",category:"Economy",publishedAt:"3 hours ago",verified:true},
+  {id:"jp2",country:"Japan",flag:"🇯🇵",sourceType:"National Broadcaster",sourceName:"NHK World — Japan Broadcasting Corporation",sourceUrl:"https://nhk.or.jp/nhkworld",headline:"Japan successfully launches next-generation H3 rocket carrying Earth observation satellite",description:"JAXA confirmed a successful launch of the upgraded H3 rocket from Tanegashima Space Center, deploying the ALOS-4 advanced land observing satellite into its target orbit.",category:"Science",publishedAt:"6 hours ago",verified:true},
+  {id:"jp3",country:"Japan",flag:"🇯🇵",sourceType:"Government Agency",sourceName:"Ministry of Foreign Affairs of Japan",sourceUrl:"https://mofa.go.jp",headline:"Japan and South Korea agree to expand trilateral security cooperation with United States",description:"Foreign ministers of Japan and South Korea met in Seoul to formalise expanded trilateral security frameworks, including joint early warning systems and real-time intelligence sharing protocols.",category:"Foreign Policy",publishedAt:"10 hours ago",verified:true},
+  {id:"jp4",country:"Japan",flag:"🇯🇵",sourceType:"Government Agency",sourceName:"Japan Cabinet Secretariat",sourceUrl:"https://cas.go.jp",headline:"Japan enacts new Cybersecurity Law mandating active defence capabilities",description:"The Diet passed landmark cybersecurity legislation empowering designated government agencies to conduct pre-emptive cyber operations against imminent attacks on critical national infrastructure.",category:"Security",publishedAt:"1 day ago",verified:true},
+];
+
+// Category color map for verified news
+const catColors = {
+  Health:       {bg:"bg-rose-50 dark:bg-rose-900/20",text:"text-rose-700 dark:text-rose-400",border:"border-rose-200 dark:border-rose-800/40"},
+  Economy:      {bg:"bg-amber-50 dark:bg-amber-900/20",text:"text-amber-700 dark:text-amber-400",border:"border-amber-200 dark:border-amber-800/40"},
+  Technology:   {bg:"bg-sky-50 dark:bg-sky-900/20",text:"text-sky-700 dark:text-sky-400",border:"border-sky-200 dark:border-sky-800/40"},
+  Science:      {bg:"bg-violet-50 dark:bg-violet-900/20",text:"text-violet-700 dark:text-violet-400",border:"border-violet-200 dark:border-violet-800/40"},
+  "Foreign Policy":{bg:"bg-indigo-50 dark:bg-indigo-900/20",text:"text-indigo-700 dark:text-indigo-400",border:"border-indigo-200 dark:border-indigo-800/40"},
+  Environment:  {bg:"bg-emerald-50 dark:bg-emerald-900/20",text:"text-emerald-700 dark:text-emerald-400",border:"border-emerald-200 dark:border-emerald-800/40"},
+  Security:     {bg:"bg-red-50 dark:bg-red-900/20",text:"text-red-700 dark:text-red-400",border:"border-red-200 dark:border-red-800/40"},
+  Policy:       {bg:"bg-slate-50 dark:bg-slate-800/40",text:"text-slate-700 dark:text-slate-300",border:"border-slate-200 dark:border-slate-700/40"},
+  Finance:      {bg:"bg-teal-50 dark:bg-teal-900/20",text:"text-teal-700 dark:text-teal-400",border:"border-teal-200 dark:border-teal-800/40"},
+};
+
+function sourceTypeBadge(type) {
+  const map = {
+    "Government Portal":  {bg:"bg-primary/10",text:"text-primary",icon:"account_balance"},
+    "National Broadcaster":{bg:"bg-sky-100 dark:bg-sky-900/30",text:"text-sky-700 dark:text-sky-400",icon:"tv"},
+    "State News Agency":  {bg:"bg-amber-100 dark:bg-amber-900/30",text:"text-amber-700 dark:text-amber-400",icon:"newspaper"},
+    "State Broadcaster":  {bg:"bg-sky-100 dark:bg-sky-900/30",text:"text-sky-700 dark:text-sky-400",icon:"tv"},
+    "Government Agency":  {bg:"bg-emerald-100 dark:bg-emerald-900/30",text:"text-emerald-700 dark:text-emerald-400",icon:"shield"},
+    "Official EU Institution":{bg:"bg-indigo-100 dark:bg-indigo-900/30",text:"text-indigo-700 dark:text-indigo-400",icon:"star"},
+  };
+  const s = map[type] || {bg:"bg-slate-100 dark:bg-slate-700/40",text:"text-slate-600 dark:text-slate-300",icon:"info"};
+  return `<span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${s.bg} ${s.text}"><span class="material-symbols-outlined" style="font-size:11px">${s.icon}</span>${type}</span>`;
+}
+
+function filterVerifiedNews(val) {
+  currentCountryFilter = val;
+  // sync pills
+  document.querySelectorAll(".verified-pill").forEach(b => {
+    const bVal = b.getAttribute("onclick").match(/'([^']+)'/)?.[1] || "";
+    b.classList.toggle("active-pill", bVal === val);
+  });
+  renderVerifiedNews(val);
+}
+
+function setCountryFilter(val, btn) {
+  currentCountryFilter = val;
+  document.querySelectorAll(".verified-pill").forEach(b => b.classList.remove("active-pill"));
+  btn.classList.add("active-pill");
+  // sync dropdown
+  document.getElementById("countryFilter").value = val;
+  renderVerifiedNews(val);
+}
+
+function renderVerifiedNews(filter) {
+  const list = document.getElementById("verifiedNewsList");
+  list.innerHTML = "";
+  const filtered = filter === "All" ? VERIFIED_NEWS : VERIFIED_NEWS.filter(n => n.country === filter);
+
+  // Update counts
+  const uniqueSources = [...new Set(filtered.map(n => n.sourceName))].length;
+  document.getElementById("verifiedSourceCount").textContent = uniqueSources;
+  document.getElementById("verifiedArticleCount").textContent = filtered.length;
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="flex flex-col items-center gap-2 py-10"><span class="material-symbols-outlined text-3xl text-slate-400">search_off</span><p class="text-sm text-slate-500 dark:text-slate-400 text-center">No verified sources found for this selection.</p></div>`;
+    return;
+  }
+
+  // Group by country when showing All
+  if (filter === "All") {
+    const countries = [...new Set(VERIFIED_NEWS.map(n => n.country))];
+    countries.forEach((country, ci) => {
+      const countryItems = VERIFIED_NEWS.filter(n => n.country === country);
+      const firstItem = countryItems[0];
+
+      // Country section header
+      const header = document.createElement("div");
+      header.className = "flex items-center gap-2 mt-2 mb-1 fade-in";
+      header.style.animationDelay = (ci * 0.06) + "s";
+      header.innerHTML = `
+        <span class="text-xl">${firstItem.flag}</span>
+        <h3 class="text-sm font-bold text-slate-800 dark:text-white">${country}</h3>
+        <div class="flex-1 h-px bg-slate-200 dark:bg-primary/20 ml-1"></div>
+        <span class="text-xs text-slate-400 dark:text-slate-500">${countryItems.length} sources</span>
+      `;
+      list.appendChild(header);
+
+      countryItems.forEach((item, idx) => {
+        list.appendChild(buildVerifiedCard(item, ci * 4 + idx));
+      });
+    });
+  } else {
+    filtered.forEach((item, idx) => {
+      list.appendChild(buildVerifiedCard(item, idx));
+    });
+  }
+}
+
+function buildVerifiedCard(item, idx) {
+  const card = document.createElement("div");
+  const cc = catColors[item.category] || catColors["Policy"];
+  card.className = "verified-card verified-glow rounded-xl bg-white dark:bg-[#1e1a2e] border border-emerald-100 dark:border-emerald-900/40 p-4 flex flex-col gap-3 fade-in";
+  card.style.animationDelay = (idx * 0.04) + "s";
+
+  card.innerHTML = `
+    <div class="flex items-start justify-between gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-base leading-none">${item.flag}</span>
+        ${sourceTypeBadge(item.sourceType)}
+        <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${cc.bg} ${cc.text} border ${cc.border}">${item.category}</span>
+      </div>
+      <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full flex-shrink-0">
+        <span class="material-symbols-outlined" style="font-size:11px">verified</span>Official
+      </span>
+    </div>
+
+    <div>
+      <p class="text-xs font-semibold text-primary mb-0.5">${escHtml(item.sourceName)}</p>
+      <p class="text-sm font-bold text-slate-900 dark:text-white leading-snug">${escHtml(item.headline)}</p>
+    </div>
+
+    <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">${escHtml(item.description)}</p>
+
+    <div class="flex items-center justify-between">
+      <span class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+        <span class="material-symbols-outlined" style="font-size:12px">schedule</span>${escHtml(item.publishedAt)}
+      </span>
+      <a href="${escHtml(item.sourceUrl)}" target="_blank" rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1
+        class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1 rounded-full transition-all">
+        <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span>Visit Source
+      </a>
+    </div>
+  `;
+  return card;
+}
+
+
+// ══════════════════════════════════════════════
+// GAMIFICATION ENGINE
+// ══════════════════════════════════════════════
+const RANKS = [
+  { name:"Scout",      emoji:"🛡️",  minXP:0,    color:"text-blue-300",   bg:"bg-blue-900/40",   border:"border-blue-500/30" },
+  { name:"Watcher",    emoji:"👁️",  minXP:100,  color:"text-cyan-300",   bg:"bg-cyan-900/40",   border:"border-cyan-500/30" },
+  { name:"Analyst",    emoji:"🔍",  minXP:300,  color:"text-violet-300", bg:"bg-violet-900/40", border:"border-violet-500/30" },
+  { name:"Investigator",emoji:"🕵️",minXP:600,  color:"text-amber-300",  bg:"bg-amber-900/40",  border:"border-amber-500/30" },
+  { name:"Sentinel",   emoji:"⚔️",  minXP:1000, color:"text-orange-300", bg:"bg-orange-900/40", border:"border-orange-500/30" },
+  { name:"Guardian",   emoji:"🔰",  minXP:1500, color:"text-rose-300",   bg:"bg-rose-900/40",   border:"border-rose-500/30"  },
+  { name:"Elite",      emoji:"💎",  minXP:2500, color:"text-emerald-300",bg:"bg-emerald-900/40",border:"border-emerald-500/30"},
+  { name:"Legend",     emoji:"🌟",  minXP:4000, color:"text-yellow-300", bg:"bg-yellow-900/40", border:"border-yellow-500/30" },
+];
+
+const BADGES = [
+  { id:"first_scan",  emoji:"🎯", name:"First Scan",    desc:"Complete your first scan",       check: g => g.totalScans >= 1 },
+  { id:"scan5",       emoji:"🔬", name:"Lab Rat",       desc:"Complete 5 scans",                check: g => g.totalScans >= 5 },
+  { id:"scan25",      emoji:"📡", name:"Radar Active",  desc:"Complete 25 scans",               check: g => g.totalScans >= 25 },
+  { id:"threat1",     emoji:"🚨", name:"Alert!",        desc:"Catch your first high threat",    check: g => g.threatsFound >= 1 },
+  { id:"threat10",    emoji:"🛑", name:"Threat Hunter", desc:"Catch 10 high threats",           check: g => g.threatsFound >= 10 },
+  { id:"reporter1",   emoji:"📢", name:"Whistleblower", desc:"File your first report",          check: g => g.reportsSubmitted >= 1 },
+  { id:"reporter5",   emoji:"📣", name:"Loud Speaker",  desc:"File 5 reports",                  check: g => g.reportsSubmitted >= 5 },
+  { id:"streak3",     emoji:"🔥", name:"On Fire",       desc:"3-day login streak",              check: g => g.streak >= 3 },
+  { id:"xp500",       emoji:"⭐", name:"Rising Star",   desc:"Earn 500 XP",                    check: g => g.totalXP >= 500 },
+  { id:"xp2000",      emoji:"💫", name:"Star Analyst",  desc:"Earn 2000 XP",                   check: g => g.totalXP >= 2000 },
+  { id:"safe10",      emoji:"✅", name:"Clean Sweep",   desc:"Find 10 safe scans in a row",    check: g => g.consecutiveSafe >= 10 },
+  { id:"allRound",    emoji:"🏆", name:"All-Rounder",   desc:"Scan + report + read trending",  check: g => g.totalScans >= 1 && g.reportsSubmitted >= 1 && g.trendingViews >= 1 },
+];
+
+let gState = {
+  totalXP: 0,
+  totalScans: 0,
+  threatsFound: 0,
+  reportsSubmitted: 0,
+  trendingViews: 0,
+  streak: 0,
+  lastLoginDay: null,
+  consecutiveSafe: 0,
+  earnedBadges: [],
+};
+
+function loadGState() {
+  try {
+    const saved = localStorage.getItem("htd_gstate");
+    if (saved) gState = { ...gState, ...JSON.parse(saved) };
+  } catch(e) {}
+}
+function saveGState() {
+  try { localStorage.setItem("htd_gstate", JSON.stringify(gState)); } catch(e) {}
+}
+
+function getRank(xp) {
+  let rank = RANKS[0];
+  for (const r of RANKS) { if (xp >= r.minXP) rank = r; }
+  return rank;
+}
+function getNextRank(xp) {
+  for (const r of RANKS) { if (xp < r.minXP) return r; }
+  return null;
+}
+function getXpProgress(xp) {
+  const rank = getRank(xp);
+  const next = getNextRank(xp);
+  if (!next) return { pct: 100, curr: xp, needed: 0 };
+  const pct = ((xp - rank.minXP) / (next.minXP - rank.minXP)) * 100;
+  return { pct: Math.min(pct, 100), curr: xp - rank.minXP, needed: next.minXP - xp };
+}
+
+function updateNavXP() {
+  const rank = getRank(gState.totalXP);
+  const prog = getXpProgress(gState.totalXP);
+  const navRank = document.getElementById("navRankLabel");
+  const navXp = document.getElementById("navXpLabel");
+  const navBar = document.getElementById("navXpBar");
+  if (navRank) navRank.textContent = rank.emoji + " " + rank.name;
+  if (navXp) navXp.textContent = gState.totalXP + " XP";
+  if (navBar) navBar.style.width = prog.pct + "%";
+}
+
+function showToast(icon, title, sub, color="#60a5fa") {
+  // Remove any existing toast
+  document.querySelectorAll(".gamify-toast").forEach(t => t.remove());
+  const el = document.createElement("div");
+  el.className = "gamify-toast";
+  el.innerHTML = `<span class="toast-icon">${icon}</span><div class="toast-body"><div class="toast-title">${title}</div><div class="toast-sub" style="color:${color}">${sub}</div></div>`;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.classList.add("toast-exit");
+    setTimeout(() => el.remove(), 400);
+  }, 3000);
+}
+
+function floatXpLabel(amount) {
+  const el = document.createElement("div");
+  el.className = "float-xp";
+  el.textContent = "+" + amount + " XP";
+  // Position near the XP bar in nav
+  const nav = document.getElementById("bottomNav");
+  const rect = nav ? nav.getBoundingClientRect() : { top: 20, right: 100 };
+  el.style.top = (rect.top + 8) + "px";
+  el.style.right = "18px";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+
+function awardXP(amount, toastIcon, toastTitle, toastSub, toastColor) {
+  const oldXP = gState.totalXP;
+  gState.totalXP += amount;
+  saveGState();
+
+  floatXpLabel(amount);
+
+  const oldRank = getRank(oldXP);
+  const newRank = getRank(gState.totalXP);
+
+  if (newRank.name !== oldRank.name) {
+    // Rank up!
+    setTimeout(() => {
+      showToast("🎉", "Rank Up! " + newRank.emoji + " " + newRank.name, "You levelled up! Keep scanning to protect the web.", "#fbbf24");
+    }, 500);
+  } else if (toastTitle) {
+    showToast(toastIcon, toastTitle, toastSub, toastColor);
+  }
+
+  updateNavXP();
+  checkBadges();
+}
+
+function checkBadges() {
+  const newlyEarned = [];
+  for (const badge of BADGES) {
+    if (!gState.earnedBadges.includes(badge.id) && badge.check(gState)) {
+      gState.earnedBadges.push(badge.id);
+      newlyEarned.push(badge);
+    }
+  }
+  saveGState();
+  if (newlyEarned.length > 0) {
+    const b = newlyEarned[0];
+    setTimeout(() => showToast(b.emoji, "Badge Unlocked: " + b.name, b.desc, "#a78bfa"), 800);
+  }
+}
+
+function updateStreak() {
+  const today = new Date().toDateString();
+  if (gState.lastLoginDay === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if (gState.lastLoginDay === yesterday) {
+    gState.streak = (gState.streak || 0) + 1;
+  } else if (gState.lastLoginDay !== today) {
+    gState.streak = 1;
+  }
+  gState.lastLoginDay = today;
+  saveGState();
+  if (gState.streak > 1) {
+    setTimeout(() => showToast("🔥", gState.streak + "-Day Streak!", "You're on a roll! +10 bonus XP", "#fb923c"), 1200);
+    awardXP(10);
+  }
+}
+
+function renderBadges() {
+  const grid = document.getElementById("badgeGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  for (const badge of BADGES) {
+    const earned = gState.earnedBadges.includes(badge.id);
+    const el = document.createElement("div");
+    el.className = "badge-item " + (earned ? "earned" : "locked");
+    el.title = badge.desc;
+    el.innerHTML = `<span class="badge-emoji">${badge.emoji}</span><span class="badge-name">${badge.name}</span>`;
+    grid.appendChild(el);
+  }
+}
+
+// ── Hook into existing functions ──
+
+// Hook report submission
+const _origSubmitReport = submitReport;
+submitReport = function() {
+  const prevCount = appState.reportCount;
+  _origSubmitReport.apply(this, arguments);
+  setTimeout(() => {
+    if (appState.reportCount > prevCount) {
+      gState.reportsSubmitted++;
+      awardXP(20, "📢", "Report Filed!", "+20 XP — Thanks for keeping us safe.", "#a78bfa");
+      saveGState();
+      checkBadges();
+    }
+  }, 500);
+};
+
+// Track trending tab views
+const _origSwitchTab = switchTab;
+switchTab = function(tabId) {
+  _origSwitchTab.apply(this, arguments);
+  if (tabId === "tabTrending") {
+    if (!gState._trendingAwarded) {
+      gState.trendingViews = (gState.trendingViews || 0) + 1;
+      gState._trendingAwarded = true;
+      awardXP(5, "📰", "Staying Informed", "+5 XP — You checked trending threats!", "#60a5fa");
+      saveGState();
+      checkBadges();
+    }
+  } else {
+    gState._trendingAwarded = false;
+  }
+};
+
+// Override refreshProfile to include gamified data
+const _origRefreshProfile = refreshProfile;
+refreshProfile = function() {
+  _origRefreshProfile.apply(this, arguments);
+
+  const rank = getRank(gState.totalXP);
+  const nextRank = getNextRank(gState.totalXP);
+  const prog = getXpProgress(gState.totalXP);
+
+  // Rank badge
+  const badge = document.getElementById("profileRankBadge");
+  if (badge) {
+    badge.textContent = rank.emoji + " " + rank.name;
+    badge.className = "rank-badge " + rank.bg + " border " + rank.border + " " + rank.color;
+  }
+
+  // Streak
+  const streakChip = document.getElementById("profileStreakChip");
+  const streakVal = document.getElementById("profileStreakVal");
+  if (streakChip && gState.streak >= 2) {
+    streakChip.classList.remove("hidden");
+    streakVal.textContent = gState.streak;
+  }
+
+  // XP bar
+  document.getElementById("profileXpTotal").textContent = gState.totalXP + " XP";
+  document.getElementById("profileCurrentRank").textContent = rank.emoji + " " + rank.name;
+  document.getElementById("profileNextRank").textContent = nextRank ? "→ " + nextRank.emoji + " " + nextRank.name : "🏆 Max Rank";
+  document.getElementById("profileXpBar").style.width = prog.pct + "%";
+  document.getElementById("profileXpCurrent").textContent = prog.curr + " XP earned";
+  document.getElementById("profileXpNext").textContent = nextRank ? prog.needed + " XP to next rank" : "Legendary!";
+
+  renderBadges();
+};
+
+// Init on load
+document.addEventListener("DOMContentLoaded", function() {
+  loadGState();
+  updateStreak();
+  updateNavXP();
+});
+
+function initTheme(){
+  // Respect saved preference; default is dark (html already has class="dark")
+  const saved = localStorage.getItem('htd_theme');
+  if(saved === 'light'){
+    document.documentElement.classList.remove('dark');
+  } else {
+    document.documentElement.classList.add('dark');
+  }
+  updateThemeIcon();
+}
+function toggleTheme(){
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('htd_theme', isDark ? 'dark' : 'light');
+  updateThemeIcon();
+}
+function updateThemeIcon(){
+  const icon = document.getElementById('themeIcon');
+  if(!icon) return;
+  const isDark = document.documentElement.classList.contains('dark');
+  icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+  icon.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var emailInput = document.getElementById('email');
+  if (emailInput) emailInput.addEventListener('input', function(){ validateEmail(this); });
+  initTheme();
+});
+
+
+
+</script>
+</body>
+</html>

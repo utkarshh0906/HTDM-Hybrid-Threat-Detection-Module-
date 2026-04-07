@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Hybrid Threat Detection</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    width:270px;
+    background:rgba(255,255,255,0.72);
+    backdrop-filter:blur(20px) saturate(1.5);
+    -webkit-backdrop-filter:blur(20px) saturate(1.5);
+    color:#1a1028;
+    border:1px solid rgba(255,255,255,0.85);
+    border-radius:0;
+    overflow:hidden;
+  }
+
+  /* ── Header ────────────────────────────────────────────────────────── */
+  .hdr{
+    background:rgba(140,43,238,0.08);
+    border-bottom:1px solid rgba(140,43,238,0.12);
+    padding:14px 16px 12px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .hdr-icon{
+    width:34px;height:34px;
+    background:rgba(140,43,238,0.12);
+    border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;flex-shrink:0;
+  }
+  .hdr-text h1{font-size:12.5px;font-weight:700;color:#1a1028;}
+  .hdr-text p{font-size:9.5px;color:rgba(26,16,40,0.5);margin-top:1px;}
+
+  /* ── Status block ──────────────────────────────────────────────────── */
+  .block{padding:12px 16px;border-bottom:1px solid rgba(140,43,238,0.08);}
+  .block-title{
+    font-size:9px;font-weight:700;
+    letter-spacing:0.08em;text-transform:uppercase;
+    color:rgba(26,16,40,0.4);margin-bottom:8px;
+  }
+
+  .status-row{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:10.5px;font-weight:600;color:#1a1028;
+  }
+  .status-dot{
+    width:7px;height:7px;border-radius:50%;flex-shrink:0;
+    margin-right:6px;
+  }
+  .status-row .left{display:flex;align-items:center;}
+  .badge{
+    font-size:9px;font-weight:700;padding:2px 7px;
+    border-radius:99px;letter-spacing:0.04em;
+  }
+  .badge.online{background:rgba(16,185,129,0.15);color:#065f46;}
+  .badge.offline{background:rgba(239,68,68,0.15);color:#991b1b;}
+  .badge.checking{background:rgba(107,114,128,0.12);color:#374151;}
+
+  /* model indicators */
+  .models{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
+  .model-row{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:10px;color:rgba(26,16,40,0.6);
+  }
+  .model-row .left{display:flex;align-items:center;gap:5px;}
+  .dot-sm{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+  .dot-sm.ok{background:#10b981;}
+  .dot-sm.off{background:#ef4444;}
+  .dot-sm.unk{background:#9ca3af;}
+
+  /* ── How-to block ──────────────────────────────────────────────────── */
+  .steps{display:flex;flex-direction:column;gap:7px;}
+  .step{display:flex;align-items:flex-start;gap:8px;font-size:10.5px;color:rgba(26,16,40,0.7);}
+  .step-num{
+    width:18px;height:18px;border-radius:6px;
+    background:rgba(140,43,238,0.1);
+    color:#8c2bee;font-size:9.5px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .step p{line-height:1.45;margin:0;}
+  .step code{
+    background:rgba(140,43,238,0.08);
+    color:#8c2bee;padding:0 3px;border-radius:3px;font-size:9.5px;
+  }
+
+  /* ── Footer ────────────────────────────────────────────────────────── */
+  .foot{
+    padding:8px 16px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .foot-tag{font-size:8.5px;color:rgba(140,43,238,0.45);font-weight:600;letter-spacing:0.05em;}
+  .refresh-btn{
+    font-size:9px;font-weight:600;
+    background:rgba(140,43,238,0.08);
+    border:none;border-radius:6px;
+    color:#8c2bee;padding:4px 8px;cursor:pointer;
+    transition:background 0.15s;
+  }
+  .refresh-btn:hover{background:rgba(140,43,238,0.15);}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-icon">🛡️</div>
+  <div class="hdr-text">
+    <h1>Hybrid Threat Detection</h1>
+    <p>AI-powered content safety analyzer</p>
+  </div>
+</div>
+
+<!-- Backend status -->
+<div class="block">
+  <div class="block-title">Backend Status</div>
+  <div class="status-row">
+    <div class="left">
+      <span class="status-dot" id="main-dot" style="background:#9ca3af"></span>
+      <span id="main-status">Checking…</span>
+    </div>
+    <span class="badge checking" id="main-badge">—</span>
+  </div>
+  <div class="models" id="models-section" style="display:none">
+    <div class="model-row">
+      <div class="left"><span class="dot-sm unk" id="dot-fake"></span>Fake News Model</div>
+      <span id="lbl-fake" style="font-size:9px;color:#9ca3af">—</span>
+    </div>
+    <div class="model-row">
+      <div class="left"><span class="dot-sm unk" id="dot-bully"></span>Cyberbullying Model</div>
+      <span id="lbl-bully" style="font-size:9px;color:#9ca3af">—</span>
+    </div>
+    <div class="model-row">
+      <div class="left"><span class="dot-sm unk" id="dot-ai"></span>AI-Text Model</div>
+      <span id="lbl-ai" style="font-size:9px;color:#9ca3af">—</span>
+    </div>
+    <div class="model-row">
+      <div class="left"><span class="dot-sm ok" id="dot-df"></span>Deepfake Scorer</div>
+      <span id="lbl-df" style="font-size:9px;color:#10b981">Heuristic ✓</span>
+    </div>
+  </div>
+</div>
+
+<!-- How to use -->
+<div class="block">
+  <div class="block-title">How to Use</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <p>Make sure backend is running:<br>
+        <code>uvicorn app:app --reload</code>
+      </p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <p>Select any text on any webpage (min 10 chars).</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <p>Click the <strong>🛡️ Analyze threat</strong> tooltip that appears, or right-click and choose <em>Analyze with Threat Detector</em>.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <p>View scores for fake news, cyberbullying, deepfake risk &amp; AI-generated text.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="foot">
+  <span class="foot-tag">HYBRID THREAT DETECTOR v1.0</span>
+  <button class="refresh-btn" id="refresh-btn">↻ Recheck</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

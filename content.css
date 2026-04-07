@@ -1,0 +1,342 @@
+/* ── content.css ─────────────────────────────────────────────────────────
+   All styles are scoped under #htd-panel to avoid bleeding into the page.
+   Design: frosted-glass, translucent white, no opaque color blocks.
+──────────────────────────────────────────────────────────────────────── */
+
+#htd-panel {
+  all: initial;                         /* hard reset — ignore page CSS     */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+
+  position: fixed !important;
+  z-index: 2147483647 !important;       /* always on top                    */
+  width: 300px !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+
+  /* ── Frosted glass ──────────────────────────────────────────────────── */
+  background: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(22px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.6) !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+  border-radius: 18px !important;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.13),
+    0 2px 8px  rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9) !important;
+
+  padding: 0 !important;
+  color: #1a1028 !important;
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+/* scrollbar inside panel */
+#htd-panel::-webkit-scrollbar { width: 4px; }
+#htd-panel::-webkit-scrollbar-thumb {
+  background: rgba(140,43,238,0.25);
+  border-radius: 99px;
+}
+
+/* ── Hidden state ──────────────────────────────────────────────────────── */
+#htd-panel.htd-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(6px) scale(0.97) !important;
+}
+
+/* ── Header bar ────────────────────────────────────────────────────────── */
+#htd-panel .htd-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 14px 10px !important;
+  border-bottom: 1px solid rgba(140,43,238,0.12) !important;
+  cursor: move !important;
+  user-select: none !important;
+}
+
+#htd-panel .htd-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #1a1028 !important;
+  letter-spacing: 0.01em !important;
+}
+
+#htd-panel .htd-shield {
+  width: 22px !important;
+  height: 22px !important;
+  background: rgba(140,43,238,0.12) !important;
+  border-radius: 7px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+#htd-panel .htd-close {
+  all: unset !important;
+  cursor: pointer !important;
+  width: 22px !important;
+  height: 22px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 7px !important;
+  color: rgba(26,16,40,0.45) !important;
+  font-size: 16px !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+#htd-panel .htd-close:hover {
+  background: rgba(140,43,238,0.1) !important;
+  color: #8c2bee !important;
+}
+
+/* ── Body ──────────────────────────────────────────────────────────────── */
+#htd-panel .htd-body {
+  padding: 12px 14px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+/* ── Selected text preview ────────────────────────────────────────────── */
+#htd-panel .htd-preview {
+  font-size: 10.5px !important;
+  color: rgba(26,16,40,0.55) !important;
+  background: rgba(140,43,238,0.06) !important;
+  border: 1px solid rgba(140,43,238,0.1) !important;
+  border-radius: 9px !important;
+  padding: 7px 10px !important;
+  line-height: 1.5 !important;
+  max-height: 52px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+/* ── Scanning animation ───────────────────────────────────────────────── */
+#htd-panel .htd-scanning {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 14px 0 6px !important;
+}
+#htd-panel .htd-scan-ring {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  border: 2px solid rgba(140,43,238,0.2) !important;
+  border-top-color: #8c2bee !important;
+  animation: htd-spin 0.8s linear infinite !important;
+}
+@keyframes htd-spin { to { transform: rotate(360deg); } }
+#htd-panel .htd-scanning p {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #8c2bee !important;
+  margin: 0 !important;
+}
+
+/* ── Score rows ────────────────────────────────────────────────────────── */
+#htd-panel .htd-scores {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+#htd-panel .htd-row {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+#htd-panel .htd-row-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+#htd-panel .htd-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  color: rgba(26,16,40,0.75) !important;
+}
+
+#htd-panel .htd-label span {
+  font-size: 13px !important;
+}
+
+#htd-panel .htd-pct {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #1a1028 !important;
+}
+
+/* ── Progress track ───────────────────────────────────────────────────── */
+#htd-panel .htd-track {
+  height: 5px !important;
+  background: rgba(0,0,0,0.07) !important;
+  border-radius: 99px !important;
+  overflow: hidden !important;
+}
+#htd-panel .htd-fill {
+  height: 100% !important;
+  border-radius: 99px !important;
+  width: 0% !important;
+  transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* fill colors — semi-transparent to keep the translucent feel */
+#htd-panel .htd-fill.fake      { background: rgba(245,158,11,0.75) !important; }
+#htd-panel .htd-fill.bully     { background: rgba(239,68,68,0.75)  !important; }
+#htd-panel .htd-fill.deepfake  { background: rgba(140,43,238,0.75) !important; }
+#htd-panel .htd-fill.ai        { background: rgba(59,130,246,0.75) !important; }
+
+/* ── Risk badge ────────────────────────────────────────────────────────── */
+#htd-panel .htd-badge {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  padding: 1px 6px !important;
+  border-radius: 99px !important;
+}
+#htd-panel .htd-badge.low      { background: rgba(16,185,129,0.15) !important; color: #065f46 !important; }
+#htd-panel .htd-badge.moderate { background: rgba(245,158,11,0.15) !important; color: #92400e !important; }
+#htd-panel .htd-badge.high     { background: rgba(239,68,68,0.15)  !important; color: #991b1b !important; }
+
+/* ── Divider ───────────────────────────────────────────────────────────── */
+#htd-panel .htd-divider {
+  height: 1px !important;
+  background: rgba(140,43,238,0.1) !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+/* ── Verdict card ──────────────────────────────────────────────────────── */
+#htd-panel .htd-verdict {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  padding: 9px 11px !important;
+  border-radius: 11px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+#htd-panel .htd-verdict.safe {
+  background: rgba(16,185,129,0.1) !important;
+  border: 1px solid rgba(16,185,129,0.25) !important;
+  color: #065f46 !important;
+}
+#htd-panel .htd-verdict.moderate {
+  background: rgba(245,158,11,0.1) !important;
+  border: 1px solid rgba(245,158,11,0.3) !important;
+  color: #92400e !important;
+}
+#htd-panel .htd-verdict.high {
+  background: rgba(239,68,68,0.1) !important;
+  border: 1px solid rgba(239,68,68,0.25) !important;
+  color: #991b1b !important;
+}
+#htd-panel .htd-verdict-icon { font-size: 18px !important; flex-shrink: 0 !important; }
+#htd-panel .htd-verdict-text p { margin: 0 !important; line-height: 1.4 !important; }
+#htd-panel .htd-verdict-text .htd-v-sub {
+  font-size: 9.5px !important;
+  font-weight: 400 !important;
+  opacity: 0.75 !important;
+  margin-top: 1px !important;
+}
+
+/* ── Error state ───────────────────────────────────────────────────────── */
+#htd-panel .htd-error {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 10px 4px !important;
+  text-align: center !important;
+}
+#htd-panel .htd-error p {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  color: #991b1b !important;
+  margin: 0 !important;
+}
+#htd-panel .htd-error small {
+  font-size: 9.5px !important;
+  color: rgba(26,16,40,0.45) !important;
+  line-height: 1.4 !important;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────── */
+#htd-panel .htd-footer {
+  padding: 6px 14px 11px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+#htd-panel .htd-footer-tag {
+  font-size: 9px !important;
+  color: rgba(140,43,238,0.5) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em !important;
+}
+#htd-panel .htd-pin-btn {
+  all: unset !important;
+  cursor: pointer !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  color: rgba(26,16,40,0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  padding: 3px 7px !important;
+  border-radius: 6px !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+#htd-panel .htd-pin-btn:hover {
+  background: rgba(140,43,238,0.08) !important;
+  color: #8c2bee !important;
+}
+
+/* ── Floating trigger tooltip ─────────────────────────────────────────── */
+#htd-tooltip {
+  all: initial;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  position: fixed !important;
+  z-index: 2147483646 !important;
+  background: rgba(255,255,255,0.7) !important;
+  backdrop-filter: blur(16px) saturate(1.5) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.5) !important;
+  border: 1px solid rgba(255,255,255,0.8) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+  padding: 5px 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #1a1028 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: opacity 0.15s, transform 0.15s !important;
+  user-select: none !important;
+}
+#htd-tooltip:hover {
+  background: rgba(255,255,255,0.88) !important;
+}
+#htd-tooltip.htd-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(4px) !important;
+}
