@@ -12,7 +12,7 @@ This project is a multi-module AI system designed to detect and analyze differen
 
 The system integrates machine learning models with a user-friendly frontend to provide real-time analysis and predictions.
 
-## ⚙️ Machine Learning Models Used
+## Machine Learning Models Used
 
 ### 1. Fake News Detection
 
@@ -35,7 +35,7 @@ The system integrates machine learning models with a user-friendly frontend to p
 
 ---
 
-## 🧠 How the Model Works
+## How the Model Works
 
 1. Input text is preprocessed and cleaned
 2. Text is converted into numerical features using TF-IDF
@@ -46,28 +46,28 @@ The system integrates machine learning models with a user-friendly frontend to p
    * A binary label (0 or 1)
    * A probability score (confidence percentage)
 
-## 📊 Output Interpretation
+## Output Interpretation
 
 * **0 → Real / Clean / Human**
 * **1 → Fake / Bullying / AI-generated**
 
 The model also provides probability scores using the sigmoid function, representing confidence levels in predictions.
 
-## 🗂️ Project Structure
+## Project Structure
 
 * `app.py` → Backend API (FastAPI/Flask)
-* `templates/` or `frontend/` → User Interface
+* `frontend/` → User Interface
 * `models/` → Saved ML models (.pkl files)
 * `requirements.txt` → Dependencies
 
-## 🚀 Deployment
+## Deployment
 
 The project is deployed using cloud platforms for accessibility:
 
 * Backend: Render
 * Frontend: (optional) Vercel
 
-## 🧪 Datasets Used
+## Datasets Used
 
 The system is trained using multiple publicly available datasets:
 
@@ -77,20 +77,20 @@ The system is trained using multiple publicly available datasets:
 * LIAR Dataset
 * AI vs Human Text Datasets
 
-## 📈 Features
+## Features
 
 * Multi-model detection system
 * Real-time prediction
 * Confidence score output
 * Scalable and modular architecture
 
-## 🔮 Future Improvements
+## Future Improvements
 
 * Integration with real-time news APIs
 * Deep learning models (BERT, LSTM)
 * Multilingual support
 * Browser extension deployment
 
-## 👨‍💻 Author
+## Author
 Developed as part of an AI/ML project focusing on real-world threat detection systems.
 
