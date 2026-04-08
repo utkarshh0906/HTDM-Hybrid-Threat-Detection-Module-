@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+numpy
+pandas
+scikit-learn
+pickle-mixin
+python-multipart
+jinja2
+aiofiles
+joblib
+nltk
